@@ -212,6 +212,34 @@ class DREAM:
 			return target
 		else:
 			return None
+
+	@staticmethod
+	def calculate_angle(start, end):
+		'''Calculate the angle of a vector connecting two points with respect to the positive x-axis.
+
+		Parameters
+		----------
+		start : 1x2 numpy array
+			x,y coordinates for start position
+
+		end : 1x2 numpy array
+			x,y coordinates for end position
+
+		Returns
+		-------
+		angle : float
+			angle of vector connecting start to end
+		'''
+		# vector from center to target
+		vec = end - start
+		# clip any tiny values
+		vec[np.isclose(vec, 0)] = 0
+		# calculate angle
+		angle = np.round(np.arctan2(vec[1], vec[0]) * 180/np.pi)
+		# constrain angle to range [0, 360)
+		if angle < 0:
+			angle += 360.
+		return angle
 		
 	def get_angle_for_trial(self, subject_idx, trial_idx):
 		'''Returns the angle of the reach in a specified trial. 
@@ -234,15 +262,7 @@ class DREAM:
 		center = self.centers[subject_idx]
 		# only calculate angle if there's a valid reach target
 		if reach_target is not None:
-			# vector from center to target
-			vec = reach_target - center
-			# clip any tiny values
-			vec[np.isclose(vec, 0)] = 0
-			# calculate angle
-			angle = np.round(np.arctan2(vec[1], vec[0]) * 180/np.pi)
-			# constrain angle to range [0, 360)
-			if angle < 0:
-				angle += 360.
+			angle = self.calculate_angle(center, reach_target)
 			return angle
 		else:
 			# if we're here, there's no non-center target in this trial
@@ -261,20 +281,66 @@ class DREAM:
 
 		Returns
 		-------
-		hand_pos_x : numpy array 
-			the x-coordinates of the hand position
-
-		hand_pos_y : numpy array
-			the y-coordinates of the hand position
+		hand_position : numpy array 
+			the xy-coordinates of the hand position
 		'''
 		# extract trial
 		trial = self.get_trial(subject_idx, trial_idx)
 		# extract hand position
 		hand_position = trial.HandPos[:, :2]
-		# split up the position into x and y coordinates
-		hand_pos_x, hand_pos_y = np.split(hand_position, [1], axis=1)
-		return hand_pos_x.ravel(), hand_pos_y.ravel()
-	
+		return hand_position
+
+	def get_movement_onset_for_trial(self, subject_idx, trial_idx, tol=23.5, consecutive=5):
+		'''Returns the index, timestamp, and hand position corresponding to movement onset for a given trial.
+
+		Parameters
+		----------
+		subject_idx : int
+			the index of the desired subject.
+
+		trial_idx : int 
+			the index of the desired trial.
+
+		tol : float
+			tolerance of movement onset, in degrees. 
+			default setting corresponds to the index at which the angle is closest to the angle of reach.
+
+		Returns
+		-------
+		index : int
+			the index of the movement onset
+
+		timestamp : float
+			the timestamp corresponding to movement onset
+
+		hand_position : tuple
+			contains the x, y coordinates at movement onset
+		'''
+		# get stim onset
+		stim_onset_idx, stim_onset_time, target = self.get_stim_onset_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		# get hand position for trial
+		hand_position = self.get_hand_pos_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		# get timestamps for trial
+		timestamps = self.get_timestamps_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		# get angle for trial
+		angle = self.get_angle_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		# set counter for consecutive number of points 
+		counter = 0
+		# iterate over time points after stim onset
+		for time_idx in range(stim_onset_idx, timestamps.size):
+			start = hand_position[time_idx - 1]
+			end = hand_position[time_idx]
+			cur_angle = self.calculate_angle(start, end)
+			if np.abs(cur_angle - angle) < tol:
+				counter += 1
+				if counter >= consecutive:
+					true_onset_idx = time_idx - consecutive
+					return true_onset_idx, timestamps[true_onset_idx], hand_position[true_onset_idx]
+			else:
+				counter = 0
+		return None
+
+
 	def get_neurons_for_trial(self, subject_idx, trial_idx):
 		'''Returns the neuron Matlab structs for a given subject and trial.
 
@@ -347,9 +413,14 @@ class DREAM:
 		if ax is None:
 			fig, ax = plt.subplots(1, 1, figsize=(10, 10))
 			
+		# grab center
 		center = self.centers[subject_idx]
+		# grab target
 		reach_target = self.get_target_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
-		hand_pos_x, hand_pos_y = self.get_hand_pos_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		# grab hand position
+		hand_position = self.get_hand_pos_for_trial(subject_idx=subject_idx, trial_idx=trial_idx)
+		hand_pos_x = hand_position[:, 0]
+		hand_pos_y = hand_position[:, 1]
 		# plot center
 		ax.scatter(center[0], center[1], color='k', s=100, zorder=10)
 		# plot targets
