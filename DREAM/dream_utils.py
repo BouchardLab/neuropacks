@@ -24,6 +24,8 @@ class DREAM:
 			target, center = self.get_targets(subject_idx=subject_idx)
 			self.targets[subject_idx] = target
 			self.centers[subject_idx] = center
+		# extract valid trials indices
+		self.valid_trials = {subject_idx : np.argwhere(self.get_valid_trial_idx(subject_idx)).ravel() for subject_idx in range(self.n_subjects)}
 
 	def get_subject(self, subject_idx):
 		'''Returns the subject Matlab struct given an index.
@@ -187,7 +189,28 @@ class DREAM:
 					# if we're here, this is the first time a non-center target has turned on 
 					return time_idx, timestamps[time_idx], target
 		# if we reached here, the trial is not valid
-		return None   
+		return None
+
+	def get_valid_trial_idx(self, subject_idx):
+		'''Returns the valid trials for a given subject.
+
+		Parameters
+		----------
+		subject_idx : int
+			the index of the desired subject.
+
+		Returns
+		-------
+		valid_trials : numpy array of Bools
+			indicates which trials are valid
+		'''
+		n_trials = self.n_trials[subject_idx]
+		valid_trials = np.zeros(n_trials, dtype='bool')
+		for trial_idx in range(n_trials):
+			if self.get_stim_onset_for_trial(subject_idx, trial_idx) is not None:
+				valid_trials[trial_idx] = True
+		return valid_trials
+
 
 	def get_target_for_trial(self, subject_idx, trial_idx):
 		'''Returns the target of the reach in a specified trial. 
@@ -340,7 +363,6 @@ class DREAM:
 				counter = 0
 		return None
 
-
 	def get_neurons_for_trial(self, subject_idx, trial_idx):
 		'''Returns the neuron Matlab structs for a given subject and trial.
 
@@ -396,6 +418,9 @@ class DREAM:
 		trial_idx : int 
 			the index of the desired trial.
 
+		neuron_idx : int
+			the index of the desired neuron.
+
 		Returns
 		-------
 		spikers_for_neuron : numpy array
@@ -408,6 +433,175 @@ class DREAM:
 		# grab spikes for specified neuron
 		spikes_for_neuron = spikes[neuron_idx]
 		return spikes_for_neuron
+
+	def get_spike_counts_for_trial(self, subject_idx, trial_idx, 
+			onset='movement', dT=(0.1, 0.3), tol=23.5, consecutive=5):
+		'''Returns the spike count for a given neuron on a chosen subject and trial.
+
+		Parameters
+		----------
+		subject_idx : int
+			the index of the desired subject.
+
+		trial_idx : int 
+			the index of the desired trial.
+
+		onset : string
+			'movement' or 'stimulus'; the frame of reference for choosing the bin to calculate
+			spike counts.
+
+		dT : tuple
+			contains the time bounds, in seconds, relative to the onset for which
+			the spike count will be calculated in.
+
+		tol, consecutive : 
+			arguments passed to get_movement_onset_for_trial.
+
+		Returns
+		-------
+		spike_counts : numpy array
+			an array containing the spike counts for each neuron
+		'''
+		# get onset time
+		if onset == 'stimulus':
+			onset_idx, onset_time, _ = self.get_stim_onset_for_trial(subject_idx, trial_idx)
+		elif onset == 'movement':
+			onset_idx, onset_time, _ = self.get_movement_onset_for_trial(subject_idx, trial_idx, tol=tol, consecutive=consecutive)
+		else:
+			raise ValueError('Incorrect Onset Value.')
+		# establish bounds for spike bin
+		bounds = (onset_time + dT[0], onset_time + dT[1])
+		# get spikes
+		spikes = self.get_spikes_for_trial(subject_idx, trial_idx)
+		# get spike counts in bin
+		spike_counts = np.zeros(len(spikes))
+		for neuron_id, spike_times in spikes.items():
+			# determine which spikes are within the bounds
+			valid_spikes = (spike_times >= bounds[0]) & (spike_times <= bounds[1])
+			# obtain the spike counts
+			spike_counts[neuron_id] = np.count_nonzero(valid_spikes)
+		return spike_counts
+
+	def get_design_matrix(self, subject_idx, form='angle', **kwargs):
+		# get valid trials
+		valid_trials = self.valid_trials[subject_idx]
+		# set up angle matrix
+		angles = np.zeros(valid_trials.size)
+		# grab angles
+		for idx, trial in enumerate(valid_trials):
+			angles[idx] = self.get_angle_for_trial(subject_idx=subject_idx, trial_idx=trial)
+		# establish design matrix
+		if form == 'angle':
+			X = angles
+		if form == 'gaussian':
+			X = np.zeros((angles.size, 2))
+			X[:, 0] = np.cos(np.deg2rad(angles))
+			X[:, 1] = np.sin(np.deg2rad(angles))
+		return X
+
+	def get_response_matrix(self, subject_idx, transform=None, **kwargs):
+		# get valid trials
+		valid_trials = self.valid_trials[subject_idx]
+		# get number of neurons
+		n_neurons = self.n_neurons[subject_idx]
+		# set up response matrix
+		y = np.zeros((valid_trials.size, n_neurons))
+		# grab angles
+		for idx, trial in enumerate(valid_trials):
+			y[idx] = self.get_spike_counts_for_trial(
+				subject_idx=subject_idx,
+				trial_idx=trial,
+				onset=kwargs.get('onset', 'movement'),
+				dT=kwargs.get('dT', (0.1, 0.3)),
+				tol=kwargs.get('tol', 23.5),
+				consecutive=kwargs.get('consecutive', 5)
+			)
+		# perform any desired transforms
+		if transform is not None:
+			if transform == 'square_root':
+				y = np.sqrt(y)
+		return y
+
+	def fit(self, subject_idx, fit, neuron_idx=None, **kwargs):
+		# get design matrix
+		X = self.get_design_matrix(subject_idx=subject_idx, **kwargs)
+		# get response matrix 
+		y = self.get_response_matrix(subject_idx=subject_idx, **kwargs)
+		if fit == 'gaussian_tuning':
+			# perform OLS fit
+			ols = LinearRegression(fit_intercept=True)
+			ols.fit(X, y)
+			# extract coefficients
+			b0 = ols.intercept_
+			c1 = ols.coef_[:, 0]
+			c2 = ols.coef_[:, 1]
+			# transform to a single cosine
+			theta_p = np.arctan2(c2, c1) * (180/np.pi)
+			theta_p[theta_p < 0] += 360
+			b1 = (c2 - c1)/(np.sin(np.deg2rad(theta_p)) - np.cos(np.deg2rad(theta_p)))
+			return b0, b1, theta_p
+		elif fit == 'gaussian_tuning_coupling':
+			# check if neuron indices were provided
+			if neuron_idx is None:
+				neuron_idx = np.arange(self.n_neurons[subject_idx])
+			# create storage for fits
+			b0 = np.zeros((neuron_idx.size))
+			c1 = np.zeros((neuron_idx.size))
+			c2 = np.zeros((neuron_idx.size))
+			# iterate over neurons
+			for idx, neuron in enumerate(neuron_idx):
+				# created extended design matrix
+				X_tc = np.concatenate((X, np.delete(y, neuron, axis=1)), axis=1)
+				# run regression
+				ols = LinearRegression(fit_intercept=True)
+				ols.fit(X_tc, y[:, neuron])
+				# store fits
+				b0[idx] = ols.intercept_
+				c1[idx] = ols.coef_[0]
+				c2[idx] = ols.coef_[1]
+			# transform to a single cosine
+			theta_p = np.arctan2(c2, c1) * (180/np.pi)
+			theta_p[theta_p < 0] += 360
+			b1 = (c2 - c1)/(np.sin(np.deg2rad(theta_p)) - np.cos(np.deg2rad(theta_p)))
+			return b0, b1, theta_p
+		elif fit == 'lasso_tuning_coupling':
+			# check if neuron indices were provided
+			if neuron_idx is None:
+				neuron_idx = np.arange(self.n_neurons[subject_idx])
+			# create storage for fits
+			b0 = np.zeros((neuron_idx.size))
+			c1 = np.zeros((neuron_idx.size))
+			c2 = np.zeros((neuron_idx.size))
+			for idx, neuron in enumerate(neuron_idx):
+				# create penalized design matrix
+				Xp = np.delete(y, neuron, axis=1)
+				# create residual matrix
+				Pnp = np.dot(X, 
+						np.dot(
+							np.linalg.inv(np.dot(X.T, X)), X.T
+						)
+					)
+				Mnp = np.identity(Pnp.shape[0]) - Pnp
+				# project out the non-penalized design matrix
+				y_ = np.dot(Mnp, y[:, neuron])
+				Xp_ = np.dot(Mnp, Xp)
+				# create lasso object for penalized coefficients
+				lasso = LassoCV(normalize=True, max_iter=10000, tol=1e-7)
+				lasso.fit(Xp_, y_.ravel())
+				# grab lasso fits
+				betaP = lasso.coef_
+				# run regression for non-penalized coefficients
+				ols = LinearRegression(fit_intercept=True)
+				ols.fit(X, y[:, neuron] - np.dot(Xp, betaP))
+				# store fits
+				b0[idx] = ols.intercept_
+				c1[idx] = ols.coef_[0]
+				c2[idx] = ols.coef_[1]
+			# transform to a single cosine
+			theta_p = np.arctan2(c2, c1) * (180/np.pi)
+			theta_p[theta_p < 0] += 360
+			b1 = (c2 - c1)/(np.sin(np.deg2rad(theta_p)) - np.cos(np.deg2rad(theta_p)))
+			return b0, b1, theta_p
 
 	def plot_trial(self, subject_idx, trial_idx, ax=None):
 		if ax is None:
