@@ -9,7 +9,7 @@ class PVC11():
 		self.get_spike_counts()
 
 	def load_data(self):
-		data = loadmat(self.data_path)
+		data = loadmat(self.data_path, struct_as_record=False)
 
 		self.events = data['data'][0, 0].EVENTS
 		self.n_neurons, self.n_stimuli, self.n_trials = self.events.shape
