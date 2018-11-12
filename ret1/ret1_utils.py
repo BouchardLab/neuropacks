@@ -332,6 +332,7 @@ class Retina:
 			containing the explained variance of the STRFfor each frame 
 			in the window.
 		'''
+
 		# set up array of cells to iterate over
 		cells = self.check_cells(cells=cells)
 
@@ -444,6 +445,7 @@ class Retina:
 			containing the explained variance of the STRFfor each frame 
 			in the window.
 		'''
+
 		# set up array of cells to iterate over
 		cells = self.check_cells(cells=cells)
 
@@ -559,27 +561,85 @@ class Retina:
 		
 		Parameters
 		----------
+		y_true : np.ndarray
+			array of true response values
+
+		y_pred : np.ndarray
+			array of predicted response values
+
+		n_features : int
+			number of features used in the model
+
 		Returns
 		-------
 		BIC : float
 			Bayesian Information Criterion
 		'''
+
 		n_samples = y_true.size
+		# calculate residual sum of squares
 		rss = np.sum((y_true - y_pred)**2)
-		BIC = n_samples * np.log(rss/n_samples) + n_features * np.log(n_samples)
+		BIC = n_samples * np.log(rss/n_samples)	\
+				 + n_features * np.log(n_samples)
 		return BIC
 
 	@staticmethod
 	def AIC(y_true, y_pred, n_features):
+		'''Calculate the Akaike Information Criterion under the assumption of 
+		normally distributed disturbances. Utilizes a softer penalty on the
+		model parsimony than the BIC.
+		
+		Parameters
+		----------
+		y_true : np.ndarray
+			array of true response values
+
+		y_pred : np.ndarray
+			array of predicted response values
+
+		n_features : int
+			number of features used in the model
+
+		Returns
+		-------
+		AIC : float
+			Akaike Information Criterion
+		'''
+
 		n_samples = y_true.size
+		# calculate residual sum of squares
 		rss = np.sum((y_true - y_pred)**2)
-		AIC = n_samples * np.log(rss/n_samples) + n_features * 2
+		AIC = n_samples * np.log(rss/n_samples) \
+				+ n_features * 2 				
 		return AIC
 
 	@staticmethod
 	def AICc(y_true, y_pred, n_features):
+		'''Calculate the corrected Akaike Information Criterion under the 
+		assumption of normally distributed disturbances. Modifies the parsimony
+		penalty. Useful in cases when the number of samples is small. 
+		
+		Parameters
+		----------
+		y_true : np.ndarray
+			array of true response values
+
+		y_pred : np.ndarray
+			array of predicted response values
+
+		n_features : int
+			number of features used in the model
+
+		Returns
+		-------
+		AICc : float
+			corrected Akaike Information Criterion
+		'''
+
 		n_samples = y_true.size
+		# calculate residual sum of squares
 		rss = np.sum((y_true - y_pred)**2)
-		AICc = n_samples * np.log(rss/n_samples) + n_features * 2 \
-			+ 2 * (n_features**2 + n_features)/(n_samples - n_features - 1)
+		AICc = n_samples * np.log(rss/n_samples) \
+				+ n_features * 2 \
+				+ 2 * (n_features**2 + n_features)/(n_samples - n_features - 1)
 		return AICc
