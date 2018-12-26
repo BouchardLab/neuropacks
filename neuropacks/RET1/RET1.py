@@ -6,7 +6,7 @@ from sklearn.linear_model import RidgeCV
 from sklearn.linear_model import LassoCV
 from sklearn.metrics import r2_score
 
-from UoI_Lasso import UoI_Lasso
+from pyuoi import UoI_Lasso
 
 
 class RET1:
@@ -25,13 +25,13 @@ class RET1:
         )
 
     def check_recording_idx(self, recording_idx):
-        '''Check to see if recording index is correctly specified.
+        """Check to see if recording index is correctly specified.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
-        '''
+            The recording index.
+        """
 
         if not isinstance(recording_idx, int):
             raise ValueError('Recording index must be an integer.')
@@ -42,20 +42,21 @@ class RET1:
         return
 
     def check_cells(self, cells):
-        '''Check 'cells' input, and potentially convert to numpy array
+        """Check 'cells' input, and potentially convert to numpy array,
         if necessary.
 
         Parameters
         ----------
         cells : int, list, np.ndarray or None
-            the set of cell indices under consideration. if the first two,
-            converts to a np.ndarray. if None, creates a np array of all cells.
+            The set of cell indices under consideration. If an int or list,
+            converts to an ndarray. If None, creates a numpy array of all
+            cells.
 
         Returns
         -------
         cells : np.ndarray
-            the converted numpy array containing the cell indices
-        '''
+            The converted numpy array containing the cell indices.
+        """
 
         # None corresponds to using all cells
         if cells is None:
@@ -72,22 +73,22 @@ class RET1:
         return cells
 
     def get_n_frames_per_window(self, recording_idx, window_length=0.5):
-        '''Returns the number of frames in a specified recording and
+        """Returns the number of frames in a specified recording and
         window size.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
+            The recording index.
 
         window_length : float
-            length of window for which to calculate STRF, in seconds
+            The length of window for which to calculate the STRF, in seconds.
 
         Returns
         -------
         n_frames_per_window : float
-            the number of stimuli frames per window length
-        '''
+            The number of stimulus frames per window length.
+        """
 
         # extract recording
         self.check_recording_idx(recording_idx=recording_idx)
@@ -104,18 +105,18 @@ class RET1:
         return n_frames_per_window
 
     def get_timestamps_for_recording(self, recording_idx):
-        '''Get timestamps for specified recording.
+        """Get timestamps for specified recording.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
+            The recording index.
 
         Returns
         -------
         timestamps : np.ndarray
-            array of timestamps for each recording
-        '''
+            The array of timestamps for each recording.
+        """
 
         # extract current recording
         self.check_recording_idx(recording_idx=recording_idx)
@@ -132,21 +133,21 @@ class RET1:
         return timestamps
 
     def get_n_features_for_recording(self, recording_idx, window_length=0.5):
-        '''Get number of features (distinct bar dimensions) for recording.
+        """Get number of features (distinct bar dimensions) for recording.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
+            The recording index.
 
         window_length : float
-            length of window for which to calculate STRF, in seconds
+            The length of window for which to calculate STRF, in seconds.
 
         Returns
         -------
         n_features : int
-            number of stimulus features
-        '''
+            The number of stimulus features.
+        """
 
         # extract current recording
         self.check_recording_idx(recording_idx=recording_idx)
@@ -163,28 +164,28 @@ class RET1:
         return n_features
 
     def get_dimensions_for_recording(self, recording_idx, window_length=0.5):
-        '''Gets both the number of features and samples for specified recording
+        """Gets both the number of features and samples for specified recording
         and window length.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
+            The recording index.
 
         window_length : float
-            length of window for which to calculate STRF, in seconds
+            The length of window for which to calculate STRF, in seconds.
 
         Returns
         -------
         n_features : int
-            number of stimulus features
+            The number of stimulus features.
 
         n_samples : int
-            number of samples in dataset
+            The number of samples in dataset.
 
         timestamps : np.ndarray
-            timestamps for dataset
-        '''
+            The timestamps for dataset.
+        """
 
         # get timestamps
         timestamps = self.get_timestamps_for_recording(
@@ -203,27 +204,28 @@ class RET1:
     def get_responses_for_recording(
         self, recording_idx, window_length=0.5, cells=None
     ):
-        '''Create response matrix for specified recording, window length, and
+        """Create response matrix for specified recording, window length, and
         choice of cells.
 
         Parameters
         ----------
         recording_idx : int
-            recording index
+            The recording index.
 
         window_length : float
-            length of window for which to calculate STRF, in seconds
+            The length of window for which to calculate STRF, in seconds.
 
         cells : int, list, np.ndarray or None
-            the set of cell indices under consideration. if the first two,
-            converts to a np.ndarray. if None, creates a np array of all cells.
+            The set of cell indices under consideration. If an int or list,
+            converts to an ndarray. If None, creates a numpy array of all
+            cells.
 
         Returns
         -------
-        responses : np.ndarray
-            n_samples x n_cells array containing the responses for each cell
-            in the recording.
-        '''
+        responses : np.ndarray, shape (n_samples, n_cells)
+            A numpy array containing the responses for each cell in
+            the recording.
+        """
 
         # convert cells to numpy array, if necessary
         cells = self.check_cells(cells=cells)
@@ -258,7 +260,7 @@ class RET1:
         return responses
 
     def get_stims_for_recording(self, recording_idx, window_length=0.5):
-        '''Create response matrix for specified recording and window length.
+        """Create response matrix for specified recording and window length.
 
         Parameters
         ----------
@@ -270,10 +272,9 @@ class RET1:
 
         Returns
         -------
-        stimuli : np.ndarray
-            n_features x n_samples array containing white noise stimuli
-            shown to the cells.
-        '''
+        stimuli : np.ndarray, shape (n_features, n_samples)
+            A numpy array containing white noise stimuli shown to the cells.
+        """
 
         # get dimensions
         n_features, n_samples, _ = self.get_dimensions_for_recording(
@@ -296,157 +297,57 @@ class RET1:
 
         return stimuli
 
-    def calculate_strf_for_neurons_and_frame(
-        self, method, recording_idx, frame, window_length=0.5,
-        return_score=False, cells=None, **kwargs
-    ):
-        '''Calculates STRF for specified neurons.
-
-        Parameters
-        ----------
-        method : string
-            regression method to use when calculating STRFs
-
-        recording_idx : int
-            recording index to obtain design and response matrices
-
-        window_length : float
-            number of seconds to fit in STRF window
-
-        return_scores : bool
-            flag indicating whether to return explained variance over window.
-
-        cells : int, list, np.ndarray or None
-            the set of cell indices under consideration. if the first two,
-            converts to a np.ndarray. if None, creates a np array of all cells.
-
-        Returns
-        -------
-        strf : np.ndarray
-            n_cells x n_frames_per_window x n_features array describing the
-            spatio-temporal receptive field.
-
-        intercepts : np.ndarray
-            n_cells x n_frames_per_window array containing the intercepts for
-            the STRFs.
-
-        r2s : np.ndarray
-            returned only if requested; n_cells x n_frames_per_window array
-            containing the explained variance of the STRFfor each frame
-            in the window.
-        '''
-
-        # set up array of cells to iterate over
-        cells = self.check_cells(cells=cells)
-
-        # extract design and response matrices
-        stimuli = self.get_stims_for_recording(
-            recording_idx=recording_idx,
-            window_length=window_length
-        )
-        responses = self.get_responses_for_recording(
-            recording_idx=recording_idx,
-            window_length=window_length,
-            cells=cells
-        )
-
-        # create object to perform fitting
-        if method == 'OLS':
-            fitter = LinearRegression()
-        elif method == 'Ridge':
-            fitter = RidgeCV(
-                cv=kwargs.get('cv', 5)
-            )
-        elif method == 'Lasso':
-            fitter = LassoCV(
-                normalize=kwargs.get('normalize', True),
-                cv=kwargs.get('cv', 5),
-                max_iter=kwargs.get('max_iter', 10000)
-            )
-        elif method == 'UoILasso':
-            fitter = UoI_Lasso(
-                normalize=kwargs.get('normalize', True),
-                estimation_score=kwargs.get('estimation_score', 'BIC'),
-                n_lambdas=kwargs.get('n_lambdas', 30),
-                n_boots_sel=kwargs.get('n_boots_sel', 30),
-                n_boots_est=kwargs.get('n_boots_est', 30),
-                selection_thres_min=kwargs.get('selection_thres_min', 1.0),
-            )
-        else:
-            raise ValueError('method %g is not available.' % method)
-
-        # extract dimensions and create storage
-        n_features, n_samples = stimuli.shape
-        n_cells = cells.size
-        strf = np.zeros((n_cells, n_features))
-        intercept = np.zeros(n_cells)
-        r2 = np.zeros(n_cells)
-        bic = np.zeros(n_cells)
-
-        # iterate over cells
-        for cell_idx, cell in enumerate(cells):
-            # copy response matrix
-            responses = np.roll(responses, -frame, axis=0)
-
-            # perform fit
-            fitter.fit(stimuli.T, responses[:, cell_idx])
-            # extract coefficients
-            strf[cell_idx, :] = fitter.coef_.T
-            intercept[cell_idx] = fitter.intercept_
-
-            # scores
-            r2[cell_idx] = r2_score(
-                responses[:, cell_idx],
-                fitter.intercept_ + np.dot(stimuli.T, fitter.coef_)
-            )
-
-        # get rid of potential unnecessary dimensions
-        strf = np.squeeze(strf)
-        r2 = np.squeeze(r2)
-
-        if return_score:
-            return strf, intercept, r2
-        else:
-            return strf, intercept
-
     def calculate_strf_for_neurons(
-        self, method, recording_idx, window_length=0.5,
-        return_scores=False, cells=None, **kwargs
+        self, method, recording_idx, window_length=0.5, test_frac=None,
+        return_scores=False, cells=None, verbose=False, **kwargs
     ):
-        '''Calculates STRF for specified neurons.
+        '''Calculates the STRFs for specified neurons and a specified method.
 
         Parameters
         ----------
         method : string
-            regression method to use when calculating STRFs
+            The regression method to use when calculating STRFs.
 
         recording_idx : int
-            recording index to obtain design and response matrices
+            The recording index to obtain design and response matrices.
 
         window_length : float
-            number of seconds to fit in STRF window
+            The number of seconds to fit in STRF window.
+
+        test_frac : float or None
+            The fraction of data to use as a test set. If None, the entire set
+            will be used only for training.
 
         return_scores : bool
-            flag indicating whether to return explained variance over window.
+            A flag indicating whether to return explained variance over window.
 
         cells : int, list, np.ndarray or None
-            the set of cell indices under consideration. if the first two,
-            converts to a np.ndarray. if None, creates a np array of all cells.
+            The set of cell indices under consideration. If None, creates a
+            numpy array of all cells.
+
+        verbose : bool
+            If True, function will output which frame it is currently fitting.
 
         Returns
         -------
-        strf : np.ndarray
-            n_cells x n_frames_per_window x n_features array describing the
-            spatio-temporal receptive field.
+        strf : np.ndarray, shape (n_cells, n_frames_per_window, n_features)
+            A numpy array containing the spatio-temporal receptive field.
 
-        intercepts : np.ndarray
-            n_cells x n_frames_per_window array containing the intercepts for
-            the STRFs.
+        intercepts : np.ndarray, shape (n_cells, n_frames_per_window)
+            A numpy array containing the intercepts for the STRFs.
 
-        r2s : np.ndarray
-            returned only if requested; n_cells x n_frames_per_window array
-            containing the explained variance of the STRFfor each frame
-            in the window.
+        training_scores : tuple of np.ndarrays, each with shape
+                            (n_cells, n_frames_per_window)
+            A tuple of numpy arrays containing scores measuring the predictive
+            power of the STRF for each frame in the window. Returned only if
+            requested.
+
+        test_scores : tuple of np.ndarrays, each with shape
+                            (n_cells, n_frames_per_window)
+            A tuple of numpy arrays containing scores measuring the predictive
+            power of the STRF, but on a test set for each frame in the window.
+            Returned only if requested. If the test fraction is None,
+            test_scores will be returned as None.
         '''
 
         # set up array of cells to iterate over
@@ -471,46 +372,75 @@ class RET1:
         # create object to perform fitting
         if method == 'OLS':
             fitter = LinearRegression()
+
         elif method == 'Ridge':
             fitter = RidgeCV(
                 cv=kwargs.get('cv', 5)
             )
+
         elif method == 'Lasso':
             fitter = LassoCV(
                 normalize=kwargs.get('normalize', True),
                 cv=kwargs.get('cv', 5),
                 max_iter=kwargs.get('max_iter', 10000)
             )
-        elif method == 'UoILasso':
+
+        elif method == 'UoI_Lasso':
             fitter = UoI_Lasso(
                 normalize=kwargs.get('normalize', True),
+                selection_frac=0.8,
+                estimation_frac=0.8,
                 estimation_score=kwargs.get('estimation_score', 'BIC'),
                 n_lambdas=kwargs.get('n_lambdas', 30),
                 n_boots_sel=kwargs.get('n_boots_sel', 30),
                 n_boots_est=kwargs.get('n_boots_est', 30),
                 selection_thres_min=kwargs.get('selection_thres_min', 1.0),
             )
+
         else:
-            raise ValueError('method %g is not available.' % method)
+            raise ValueError('Method %g is not available.' % method)
 
         # extract dimensions and create storage
         n_features, n_samples = stimuli.shape
         n_cells = cells.size
         strf = np.zeros((n_cells, n_frames_per_window, n_features))
         intercepts = np.zeros((n_cells, n_frames_per_window))
-        # score storage
-        r2s = np.zeros((n_cells, n_frames_per_window))
-        aics = np.zeros((n_cells, n_frames_per_window))
-        bics = np.zeros((n_cells, n_frames_per_window))
+
+        # training and test score storage
+        r2s_training = np.zeros((n_cells, n_frames_per_window))
+        aics_training = np.zeros((n_cells, n_frames_per_window))
+        bics_training = np.zeros((n_cells, n_frames_per_window))
+
+        # if we evaluate on a test set, split up the data
+        if test_frac is not None:
+            n_test_samples = int(test_frac * n_samples)
+
+            # split up stimulus
+            # the samples axis is different for the stimuli and responses
+            # matrices
+            stimuli_test, stimuli = np.split(
+                stimuli, [n_test_samples], axis=1
+            )
+            responses_test, responses = np.split(
+                responses, [n_test_samples], axis=0
+            )
+            r2s_test = np.zeros((n_cells, n_frames_per_window))
+            aics_test = np.zeros((n_cells, n_frames_per_window))
+            bics_test = np.zeros((n_cells, n_frames_per_window))
 
         # iterate over cells
         for cell_idx, cell in enumerate(cells):
+            if verbose:
+                print('Cell ', cell)
             # copy response matrix
             responses_copy = np.copy(responses)
+            if test_frac is not None:
+                responses_test_copy = np.copy(responses_test)
 
             # iterate over frames in window
             for frame in range(n_frames_per_window):
-                print(frame)
+                if verbose:
+                    print('  Frame ', frame)
                 # perform fit
                 fitter.fit(stimuli.T, responses_copy[:, cell_idx])
                 # extract coefficients
@@ -523,20 +453,20 @@ class RET1:
                 n_features = np.count_nonzero(fitter.coef_) + 1
 
                 # explained variance
-                r2s[cell_idx, frame] = r2_score(
+                r2s_training[cell_idx, frame] = r2_score(
                     y_true=y_true,
                     y_pred=y_pred
                 )
 
                 # bics
-                bics[cell_idx, frame] = self.BIC(
+                bics_training[cell_idx, frame] = self.BIC(
                     y_true=y_true,
                     y_pred=y_pred,
                     n_features=n_features
                 )
 
                 # aics
-                aics[cell_idx, frame] = self.AIC(
+                aics_training[cell_idx, frame] = self.AIC(
                     y_true=y_true,
                     y_pred=y_pred,
                     n_features=n_features
@@ -545,41 +475,82 @@ class RET1:
                 # roll the window up
                 responses_copy = np.roll(responses_copy, -1, axis=0)
 
+                # act on test set if necessary
+                if test_frac is not None:
+                    y_true_test = responses_test_copy[:, cell_idx]
+                    y_pred_test = fitter.intercept_ \
+                        + np.dot(stimuli_test.T, fitter.coef_)
+
+                    # explained variance
+                    r2s_test[cell_idx, frame] = r2_score(
+                        y_true=y_true_test,
+                        y_pred=y_pred_test
+                    )
+
+                    # bics
+                    bics_test[cell_idx, frame] = self.BIC(
+                        y_true=y_true_test,
+                        y_pred=y_pred_test,
+                        n_features=n_features
+                    )
+
+                    # aics
+                    aics_test[cell_idx, frame] = self.AIC(
+                        y_true=y_true_test,
+                        y_pred=y_pred_test,
+                        n_features=n_features
+                    )
+
+                    # roll the window up
+                    responses_test_copy = np.roll(
+                        responses_test_copy, -1, axis=0
+                    )
+
         # get rid of potential unnecessary dimensions
         strf = np.squeeze(strf)
-        r2s = np.squeeze(r2s)
-        bics = np.squeeze(bics)
-        aics = np.squeeze(aics)
+        r2s_training = np.squeeze(r2s_training)
+        bics_training = np.squeeze(bics_training)
+        aics_training = np.squeeze(aics_training)
+        training_scores = (r2s_training, bics_training, aics_training)
+
+        if test_frac is not None:
+            r2s_test = np.squeeze(r2s_test)
+            bics_test = np.squeeze(bics_test)
+            aics_test = np.squeeze(aics_test)
+            test_scores = (r2s_test, bics_test, aics_test)
+        else:
+            test_scores = None
 
         if return_scores:
-            return strf, intercepts, r2s, bics, aics
+            return strf, intercepts, training_scores, test_scores
         else:
             return strf, intercepts
 
     @staticmethod
     def BIC(y_true, y_pred, n_features):
-        '''Calculate the Bayesian Information Criterion under the assumption of
+        """Calculate the Bayesian Information Criterion under the assumption of
         normally distributed disturbances (which allows the BIC to take on the
         simple form below).
 
         Parameters
         ----------
         y_true : np.ndarray
-            array of true response values
+            Array of true response values.
 
         y_pred : np.ndarray
-            array of predicted response values
+            Array of predicted response values.
 
         n_features : int
-            number of features used in the model
+            Number of features used in the model.
 
         Returns
         -------
         BIC : float
-            Bayesian Information Criterion
-        '''
+            The Bayesian Information Criterion.
+        """
 
         n_samples = y_true.size
+
         # calculate residual sum of squares
         rss = np.sum((y_true - y_pred)**2)
         BIC = n_samples * np.log(rss / n_samples) \
@@ -595,21 +566,22 @@ class RET1:
         Parameters
         ----------
         y_true : np.ndarray
-            array of true response values
+            Array of true response values.
 
         y_pred : np.ndarray
-            array of predicted response values
+            Array of predicted response values.
 
         n_features : int
-            number of features used in the model
+            Number of features used in the model.
 
         Returns
         -------
         AIC : float
-            Akaike Information Criterion
+            The Akaike Information Criterion.
         '''
 
         n_samples = y_true.size
+
         # calculate residual sum of squares
         rss = np.sum((y_true - y_pred)**2)
         AIC = n_samples * np.log(rss / n_samples) \
@@ -618,28 +590,29 @@ class RET1:
 
     @staticmethod
     def AICc(y_true, y_pred, n_features):
-        '''Calculate the corrected Akaike Information Criterion under the
+        """Calculate the corrected Akaike Information Criterion under the
         assumption of normally distributed disturbances. Modifies the parsimony
         penalty. Useful in cases when the number of samples is small.
 
         Parameters
         ----------
         y_true : np.ndarray
-            array of true response values
+            Array of true response values
 
         y_pred : np.ndarray
-            array of predicted response values
+            Array of predicted response values.
 
         n_features : int
-            number of features used in the model
+            The number of features used in the model.
 
         Returns
         -------
         AICc : float
-            corrected Akaike Information Criterion
-        '''
+            The corrected Akaike Information Criterion.
+        """
 
         n_samples = y_true.size
+
         # calculate residual sum of squares
         rss = np.sum((y_true - y_pred)**2)
         AICc = n_samples * np.log(rss / n_samples) \
