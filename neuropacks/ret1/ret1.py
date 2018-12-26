@@ -301,7 +301,7 @@ class RET1:
         self, method, recording_idx, window_length=0.5, test_frac=None,
         return_scores=False, cells=None, verbose=False, **kwargs
     ):
-        '''Calculates the STRFs for specified neurons and a specified method.
+        """Calculates the STRFs for specified neurons and a specified method.
 
         Parameters
         ----------
@@ -348,7 +348,7 @@ class RET1:
             power of the STRF, but on a test set for each frame in the window.
             Returned only if requested. If the test fraction is None,
             test_scores will be returned as None.
-        '''
+        """
 
         # set up array of cells to iterate over
         cells = self.check_cells(cells=cells)
@@ -559,7 +559,7 @@ class RET1:
 
     @staticmethod
     def AIC(y_true, y_pred, n_features):
-        '''Calculate the Akaike Information Criterion under the assumption of
+        """Calculate the Akaike Information Criterion under the assumption of
         normally distributed disturbances. Utilizes a softer penalty on the
         model parsimony than the BIC.
 
@@ -578,7 +578,7 @@ class RET1:
         -------
         AIC : float
             The Akaike Information Criterion.
-        '''
+        """
 
         n_samples = y_true.size
 

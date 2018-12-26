@@ -9,7 +9,7 @@ class PVC11():
         self.get_spike_counts()
 
     def load_data(self):
-        """Loads the PVC 11 data."""
+        """Loads the PVC-11 data."""
 
         # load data
         data = loadmat(self.data_path, struct_as_record=False)
@@ -17,16 +17,15 @@ class PVC11():
         self.events = data['data'][0, 0].EVENTS
         # extract experiment parameters
         self.n_neurons, self.n_stimuli, self.n_trials = self.events.shape
-        return
 
     def get_spike_counts(self):
-        '''Get spike counts from dataset.
+        """Get spike counts from dataset.
 
         Returns
         -------
         spike_counts : nd-array, shape (n_neurons, n_stim, n_trials)
             An array containing spike counts over all neurons and trials.
-        '''
+        """
 
         self.spike_counts = np.zeros(
             (self.n_neurons, self.n_stimuli, self.n_trials)
@@ -43,10 +42,19 @@ class PVC11():
         return self.spike_counts
 
     def get_angles(self):
-        return np.linspace(0, 360, self.n_stimuli + 1)[:-1]
+        """Obtain the unique angles of gratings shown during the experiment.
+
+        Returns
+        -------
+        angles : np.ndarray
+            The unique angles, in degrees, of drifting gratings shown in the
+            experiment.
+        """
+        angles = np.linspace(0, 360, self.n_stimuli + 1)[:-1]
+        return angles
 
     def get_design_matrix(self, form='angle'):
-        '''Create design matrix according to specified form.
+        """Create design matrix according to a specified form.
 
         Parameters
         ----------
@@ -55,31 +63,33 @@ class PVC11():
 
         Returns
         -------
-        X : ndarray
-            The design matrix. The first dimension is equal to number of trials
-            while the second dimension varies according to the desired form.
-        '''
+        X : nd-array, shape (n_trials, n_features)
+            The design matrix.
+        """
 
         unique_angles = self.get_angles()
         angles = np.repeat(unique_angles, self.n_trials)
         if form == 'angle':
             # the angles for each trial; no extra dimension required
             X = angles
+
         elif form == 'cosine':
             X = np.zeros((angles.size, 2))
             X[:, 0] = np.cos(np.deg2rad(angles))
             X[:, 1] = np.sin(np.deg2rad(angles))
+
         elif form == 'gaussian':
             X = np.zeros((angles.size, 2))
             X[:, 0] = np.deg2rad(angles)
             X[:, 1] = np.deg2rad(angles)**2
+
         else:
             raise ValueError("Incorrect design matrix form specified.")
 
         return X
 
     def get_response_matrix(self, transform=None):
-        '''Calculates response matrix.
+        """Calculates response matrix.
 
         The ordering for the trials in the response matrix is given by:
             stimulus -> trials
@@ -93,10 +103,10 @@ class PVC11():
 
         Returns
         -------
-        Y : ndarray, shape (n_responses, n_neurons)
+        Y : nd-array, shape (n_responses, n_neurons)
             An array containing the spike counts for each neuron over all the
             trials.
-        '''
+        """
 
         Y = np.reshape(
             self.spike_counts,
