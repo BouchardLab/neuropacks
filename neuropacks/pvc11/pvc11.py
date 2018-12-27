@@ -73,6 +73,9 @@ class PVC11():
             # the angles for each trial; no extra dimension required
             X = angles
 
+        elif form == 'label':
+            X = (angles/30).astype('int64')
+
         elif form == 'cosine':
             X = np.zeros((angles.size, 2))
             X[:, 0] = np.cos(np.deg2rad(angles))
