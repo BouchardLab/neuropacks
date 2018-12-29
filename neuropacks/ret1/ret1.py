@@ -298,8 +298,8 @@ class RET1:
         return stimuli
 
     def calculate_strf_for_neurons(
-        self, method, recording_idx, window_length=0.5, test_frac=None,
-        return_scores=False, cells=None, verbose=False, **kwargs
+        self, method, recording_idx, window_length=0.5, cells=None,
+        test_frac=None, return_scores=False, verbose=False, **kwargs
     ):
         """Calculates the STRFs for specified neurons and a specified method.
 
@@ -388,13 +388,13 @@ class RET1:
         elif method == 'UoI_Lasso':
             fitter = UoI_Lasso(
                 normalize=kwargs.get('normalize', True),
-                selection_frac=0.8,
-                estimation_frac=0.8,
-                estimation_score=kwargs.get('estimation_score', 'BIC'),
-                n_lambdas=kwargs.get('n_lambdas', 30),
                 n_boots_sel=kwargs.get('n_boots_sel', 30),
                 n_boots_est=kwargs.get('n_boots_est', 30),
-                selection_thres_min=kwargs.get('selection_thres_min', 1.0),
+                selection_frac=kwargs.get('selection_frac', 0.8),
+                estimation_frac=kwargs.get('estimation_frac', 0.8),
+                n_lambdas=kwargs.get('n_lambdas', 30),
+                stability_selection=kwargs.get('stability_selection', 1.),
+                estimation_score=kwargs.get('estimation_score', 'BIC')
             )
 
         else:
