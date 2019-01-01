@@ -4,6 +4,36 @@ from scipy.io import loadmat
 
 class PVC11():
     def __init__(self, data_path):
+        """Processes and provides design/response matrices for the primary
+        visual cortex 11 dataset from CRCNS.
+
+        Parameters
+        ----------
+        data_path : string
+            The path to the PVC11 dataset.
+
+        Attributes
+        ----------
+        data_path : string
+            The path to the PVC11 dataset.
+
+        events : nd-array, shape (n_neurons, n_stimuli, n_trials)
+            A numpy array containing the spiking responses for each neuron
+            to each stimulus on each trial.
+
+        n_neurons : int
+            The number of neurons in the experiment.
+
+        n_stimuli : int
+            The number of stimuli shown in the experiment.
+
+        n_trials : int
+            The number of trials for each stimulus in the experiment.
+
+        spike_counts : nd-array, shape (n_neurons, n_stimuli, n_trials)
+            A numpy array containing the spiking count for each neuron
+            to each stimulus on each trial.
+        """
         self.data_path = data_path
         self.load_data()
         self.get_spike_counts()
