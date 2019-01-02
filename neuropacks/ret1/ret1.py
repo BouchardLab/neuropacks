@@ -11,6 +11,37 @@ from pyuoi import UoI_Lasso
 
 class RET1:
     def __init__(self, data_path, random_path):
+        """Processes and calculates STRFs for the retinal white noise
+        (RET1) data from CRCNS.
+
+        Parameters
+        ----------
+        data_path : string
+            The path to the RET1 dataset.
+
+        random_path : string
+            The path to the RET1 dataset's randomly generated numbers.
+
+        Attributes
+        ----------
+        data_path : string
+            The path to the RET1 dataset.
+
+        random_path : string
+            The path to the RET1 dataset's randomly generated numbers.
+
+        recordings : MAT object
+            A MAT object containing all the recordings.
+
+        n_recordings : int
+            The number of available recordings.
+
+        spikes : nd-array, shape (n_recordings, n_cells)
+            The times for the recorded spikes.
+
+        n_cells : int
+            The number of retinal cells recorded.
+        """
         self.data_path = data_path
         self.random_path = random_path
 

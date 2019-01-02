@@ -4,6 +4,67 @@ import numpy as np
 
 class ECOG:
     def __init__(self, data_path, grid_path=None):
+        """Processes and provides design/response matrices for the primary
+        auditory cortex ECoG dataset from the Bouchard Lab.
+
+        Parameters
+        ----------
+        data_path : string
+            The path to the ECoG dataset.
+
+        grid_path : string, optional
+            Path to the grid file.
+
+        Attributes
+        ----------
+        data_path : string
+            The path to the ECoG dataset.
+
+        responses : nd-array
+            A numpy array containing the responses of the electrodes to all
+            stimuli and trials. The responses are already decomposed into
+            their frequency bands. This array has shape
+                (n_timepoints, n_trials, n_stim_amps, n_stim_freqs,
+                n_electrodes, n_bands)
+
+        n_timepoints : int
+            The number of timepoints for each trial.
+
+        n_trials : int
+            The number of repetitions for each frequency, amplitude
+            combination.
+
+        n_stim_amps : int
+            The number of unique stimulus amplitudes.
+
+        n_stim_freqs : int
+            The number of unique stimulus frequencies.
+
+        n_electrodes : int
+            The number of electrodes.
+
+        n_bands : int
+            The number of frequency bands in the wavelet decomposition.
+
+        n_total_trials : int
+            The number of total trials, including all repetitions, stimulus
+            values, and amplitude values.
+
+        freq_set : nd-array
+            The unique frequencies used for each tone pip in the experiment.
+
+        log_freq_set : nd-array
+            The unique log-frequencies used for each tone pip in the
+            experiment.
+
+        amp_set : nd-array
+            The unique amplitude attenuations used for each tone pip in the
+            experiment.
+
+        bands : nd-array of strings
+            The names corresponding to each frequency band in the wavelet
+            decomposition.
+        """
         self.data_path = data_path
 
         # read in data
