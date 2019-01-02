@@ -127,7 +127,7 @@ class ECOG:
 
         return responses_per_electrode
 
-    def create_response_matrix(
+    def get_response_matrix(
         self, bounds, band, electrodes=None, transform=None
     ):
         """Creates the response matrix.
@@ -174,7 +174,7 @@ class ECOG:
 
         return Y
 
-    def create_design_matrix(
+    def get_design_matrix(
         self, form='bf', n_gaussians=7, lower_log_freq=None,
         upper_log_freq=None, var=0.64
     ):
@@ -263,7 +263,7 @@ class ECOG:
 
         return X
 
-    def create_tuning_curve(
+    def get_tuning_curve(
         self, tuning_coefs, frequencies=None, lower_log_freq=None,
         upper_log_freq=None, var=0.64
     ):
