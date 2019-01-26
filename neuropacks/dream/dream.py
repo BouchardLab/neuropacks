@@ -741,7 +741,9 @@ class DREAM:
 
         return X
 
-    def get_response_matrix(self, subject_idx, transform=None, **kwargs):
+    def get_response_matrix(
+        self, subject_idx, transform=None, active_bound=None, **kwargs
+    ):
         """Create the response matrix.
 
         Parameters
@@ -752,6 +754,11 @@ class DREAM:
         transform : string
             The transform to apply to the spike counts. Available option is
             "square_root". If None, no transform is applied.
+
+        active_bound : float
+            The threshold, in firing rate, to include a neuron in the response
+            matrix (i.e. extract "active" neurons). If None, no thresholding
+            is performed.
 
         Returns
         -------
@@ -775,6 +782,13 @@ class DREAM:
                 tol=kwargs.get('tol', 23.5),
                 consecutive=kwargs.get('consecutive', 5)
             )
+        # extract "active" neurons
+        if active_bound is not None:
+            bounds = kwargs.get('dT', (0.1, 0.3))
+            dT = bounds[1] - bounds[0]
+            active_indices = np.mean(Y, axis=0) / dT > active_bound
+            Y = Y[:, active_indices]
+
         # perform any desired transforms
         if transform is not None:
             if transform == 'square_root':
