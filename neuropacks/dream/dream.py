@@ -165,12 +165,18 @@ class DREAM:
         for trial_idx in range(n_trials):
             # grab trial
             trial = trials[trial_idx]
-            # extract indices for which target is on
-            target_indices = ~np.isnan(trial.TargetPos)
-            # grab unique target values
-            target = np.unique(trial.TargetPos[target_indices[:, 0]], axis=0)
-            # add the new targets on
-            targets = np.concatenate((targets, target), axis=0)
+            # grab target position
+            target_position = trial.TargetPos
+            # quick check whether there is no target in this trial
+            if not np.all(np.isnan(target_position)):
+                # extract indices for which target is on
+                target_indices = ~np.isnan(target_position)
+                # grab unique target values
+                target = np.unique(
+                    target_position[target_indices[:, 0]], axis=0
+                )
+                # add the new targets on
+                targets = np.concatenate((targets, target), axis=0)
 
         # extract only unique targets
         targets = np.unique(targets[1:, :2], axis=0)
