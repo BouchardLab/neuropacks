@@ -279,7 +279,7 @@ class ECOG:
             # intialize design matrix
             X = np.zeros((n_total_trials, self.n_stim_freqs))
 
-        elif form == 'bf':
+        elif form == 'bf' or form == 'abf':
             # establish log frequency bounds
             if lower_log_freq is None:
                 lower_log_freq = self.log_freq_set[1]
@@ -321,6 +321,14 @@ class ECOG:
                             -(log_freq - means)**2/(2 * var)
                         )
                         X[index, :] = parametric_stim
+                    elif form == 'abf':
+                        # extract stimulus information
+                        log_freq = self.log_freq_set[freq_idx]
+                        amplitude = 8 + self.amp_set[amp_idx]
+                        parametric_stim = norm * np.exp(
+                            -(log_freq - means)**2/(2 * var)
+                        )
+                        X[index, :] = amplitude * parametric_stim
 
         return X
 
