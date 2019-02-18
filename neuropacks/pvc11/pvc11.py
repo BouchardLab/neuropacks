@@ -83,7 +83,7 @@ class PVC11():
         angles = np.linspace(0, 360, self.n_stimuli + 1)[:-1]
         return angles
 
-    def get_design_matrix(self, form='angle'):
+    def get_design_matrix(self, form='angle', angles=None):
         """Create design matrix according to a specified form.
 
         Parameters
@@ -97,8 +97,12 @@ class PVC11():
             The design matrix.
         """
 
-        unique_angles = self.get_angles()
-        angles = np.repeat(unique_angles, self.n_trials)
+        if angles is None:
+            unique_angles = self.get_angles()
+            angles = np.repeat(unique_angles, self.n_trials)
+        else:
+            unique_angles = np.unique(angles)
+
         if form == 'angle':
             # the angles for each trial; no extra dimension required
             X = angles
@@ -110,6 +114,18 @@ class PVC11():
             X = np.zeros((angles.size, 2))
             X[:, 0] = np.cos(np.deg2rad(angles))
             X[:, 1] = np.sin(np.deg2rad(angles))
+
+        elif form == 'cosine2':
+            X = np.zeros((angles.size, 2))
+            X[:, 0] = np.cos(2 * np.deg2rad(angles))
+            X[:, 1] = np.sin(2 * np.deg2rad(angles))
+
+        elif form == 'one_hot':
+            X = np.zeros((angles.size, unique_angles.size))
+
+            for idx, angle in enumerate(angles):
+                angle_idx = np.asscalar(np.argwhere(unique_angles == angle))
+                X[idx, angle_idx] = 1
 
         elif form == 'gaussian':
             X = np.zeros((angles.size, 2))
@@ -156,3 +172,88 @@ class PVC11():
                 raise ValueError("Transform %s is not recognized." % transform)
 
         return Y
+
+    def get_tuning_curve(
+        self, form, tuning_coefs, intercept=None, angles=None
+    ):
+        """Gets the tuning curve given a set of tuning coefficients.
+
+        Parameters
+        ----------
+        form : string
+            The type of design matrix used. Valid options are "angle",
+            "cosine", "cosine_speed", "one_hot", and "speed_hot".
+
+        tuning_coefs : nd-array, shape (n_features)
+            The coefficients describing the tuning of the neuron.
+
+        intercept : float, optional
+            The intercept.
+
+        angles : ndarray
+            The angles over which to calculate the tuning curve. If None, a
+            default set is used.
+
+        Returns
+        -------
+        tuning_curve : ndarray
+            The responses across the set of angles.
+
+        """
+        # if no angles are provided, calculate a set
+        if angles is None:
+            angles = self.get_angles()
+            if form != 'one_hot':
+                angles = np.linspace(angles[0], angles[-1], 1000)
+
+        # calculate design matrix for angles
+        X = self.get_design_matrix(form=form, angles=angles)
+
+        # calculate tuning curve
+        tuning_curve = np.dot(X, tuning_coefs)
+        if intercept is not None:
+            tuning_curve += intercept
+
+        return angles, tuning_curve
+
+    @staticmethod
+    def get_tuning_modulation_and_preference(self, form, tuning_coefs):
+        """Extracts the tuning modulation and preference from a set
+        of tuning coefficients.
+
+        Parameters
+        ----------
+        form : string
+            The type of design matrix used. Valid options are "angle",
+            "cosine", "cosine_speed", "one_hot", and "speed_hot".
+
+        tuning_coefs : nd-array, shape (n_neurons, n_features)
+            The coefficients describing the tuning of each neuron.
+
+        Returns
+        -------
+        modulations : nd-array of floats
+            The modulation (min-to-max distance) for each neuron.
+
+        preferences : nd-array of floats
+            The preference (location of tuning maximum) for each neuron.
+        """
+
+        if form == 'cosine' or form == 'cosine2':
+            c1 = tuning_coefs[:, 0]
+            c2 = tuning_coefs[:, 1]
+            preferences = np.arctan2(c2, c1) * (180/np.pi)
+            preferences[preferences < 0] += 360
+            preferences_rad = np.deg2rad(preferences)
+            modulations = \
+                (c2 - c1)/(np.sin(preferences_rad) - np.cos(preferences_rad))
+
+        elif form == 'one_hot':
+            preferences = 30 * np.argmax(tuning_coefs, axis=1)
+            modulations = \
+                np.max(tuning_coefs, axis=1) - np.min(tuning_coefs, axis=1)
+
+        else:
+            raise ValueError('Form %s is not available.' % form)
+
+        return modulations, preferences

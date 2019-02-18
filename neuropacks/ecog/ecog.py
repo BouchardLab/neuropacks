@@ -271,7 +271,7 @@ class ECOG:
         # calculate number of trials
         n_total_trials = self.n_stim_freqs * self.n_stim_amps * self.n_trials
 
-        if form == 'frequency' or form == 'id':
+        if form == 'frequency' or form == 'id' or form == 'amplitude':
             # initialize design matrix
             X = np.zeros(n_total_trials)
 
@@ -308,6 +308,8 @@ class ECOG:
                     # populate this trial with design matrix information
                     if form == 'frequency':
                         X[index] = self.freq_set[freq_idx]
+                    elif form == 'amplitude':
+                        X[index] = self.amp_set[amp_idx]
                     elif form == 'id':
                         X[index] = 100 * amp_idx + freq_idx
                     elif form == '1h':
@@ -324,7 +326,7 @@ class ECOG:
                     elif form == 'abf':
                         # extract stimulus information
                         log_freq = self.log_freq_set[freq_idx]
-                        amplitude = 8 + self.amp_set[amp_idx]
+                        amplitude = self.amp_set[amp_idx]
                         parametric_stim = norm * np.exp(
                             -(log_freq - means)**2/(2 * var)
                         )
