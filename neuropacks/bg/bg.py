@@ -1,31 +1,154 @@
 import h5py
 import numpy as np
+from scipy.signal import convolve
 
 
 class BG():
     def __init__(self, data_path):
         """Processes and provides design/response matrices for the basal
         ganglia recordings during stop/go tasks from the Berkes Lab."""
-        self.data_path = data_path
-        data = h5py.File(data_path, 'r')
 
-        if 'GoodUnits' in data:
-            self.good_units = data['GoodUnits'][:].ravel()
-            self.n_good_units = self.good_units.size
-        else:
-            self.good_units = None
+        self.data_path = data_path
 
         # populate list of trials
-        self.trials, self.bad_trials = self.populate_trials(data)
+        self.trials, self.bad_trials, self.good_units = \
+            self.populate_trials(self.data_path)
         self.n_trials = len(self.trials)
+
         # obtain good trials
         self.good_trials = np.setdiff1d(np.arange(self.n_trials),
                                         self.bad_trials)
         self.n_good_trials = self.good_trials.size
-        data.close()
 
-    def populate_trials(self, data):
-        """Populate a list of Trial objects given a data object."""
+    def get_pre_tone_condition_trials(self, condition=True):
+        """Get pre-tone conditions for all trials.
+
+        Parameters
+        ----------
+        condition : bool
+            If True, the pre-tone successes are returned. If False, the
+            pre-tone failures are returned.
+
+        trials : ndarray
+            The trials satisfying the specified condition.
+        """
+        trials = np.array([], dtype='int')
+
+        for idx, trial in enumerate(self.trials):
+            if condition:
+                if trial.is_pretone_success():
+                    trials = np.append(trials, idx)
+            else:
+                if trial.is_pretone_failure():
+                    trials = np.append(trials, idx)
+
+        return trials
+
+    def get_binned_spikes(self, trial, unit, sampling_rate=500, bounds=None):
+        """Bin spike sequences for a given trial and unit.
+
+        Parameters
+        ----------
+        trial : int
+            The trial index.
+
+        unit : int
+            The unit index.
+
+        sampling_rate : int
+            The sampling rate of the binning.
+
+        bounds : tuple
+            The endpoints, in seconds, to perform the binning.
+
+        Returns
+        -------
+        binned_spikes : ndarray
+            The binned spike counts.
+
+        bins : ndarray
+            The timestamps for each point in the firing rate.
+        """
+        spike_times = self.trials[trial].spike_times[unit]
+
+        if bounds is None:
+            bins = self.trials[trial].timestamps
+        else:
+            bins = np.arange(bounds[0], bounds[1], 1 / sampling_rate)
+
+        binned_spikes, _ = np.histogram(spike_times, bins=bins)
+
+        return binned_spikes, bins
+
+    def get_firing_rate(
+        self, trial, unit, sampling_rate=500, sigma=0.03, bounds=None,
+        kernel_extent=(-2, 2)
+    ):
+        """Obtain a firing rate estimate using a Gaussian kernel.
+
+        Parameters
+        ----------
+        trial : int
+            The trial index.
+
+        unit : int
+            The unit index.
+
+        sampling_rate : int
+            The sampling rate of the binning and kernel.
+
+        sigma : float
+            The width of the Gaussian kernel.
+
+        bounds : tuple
+            The endpoints, in seconds, to extract the firing rate.
+
+        kernel_extent : tuple
+            The extent of the Gaussian kernel around the mean.
+
+        Returns
+        -------
+        firing_rate : ndarray
+            The firing rate within the bounds.
+
+        bins : ndarray
+            The timestamps for each point in the firing rate.
+        """
+        spike_times = self.trials[trial].spike_times[unit]
+
+        if bounds is None:
+            bins = self.trials[trial].timestamps
+        else:
+            bins = np.arange(bounds[0], bounds[1], 1 / sampling_rate)
+        binned_spikes, _ = np.histogram(spike_times, bins=bins)
+
+        x = np.arange(kernel_extent[0], kernel_extent[1], 1 / sampling_rate)
+        kernel = np.exp(-x**2 / (2 * sigma**2)) / np.sqrt(2 * np.pi * sigma**2)
+
+        firing_rate = convolve(binned_spikes, kernel, mode='same')
+        return firing_rate, bins[:-1]
+
+    @staticmethod
+    def populate_trials(data_path):
+        """Populate a list of Trial objects given a data path.
+
+        Parameters
+        ----------
+        data_path : string
+            The path to the dataset.
+
+        Returns
+        -------
+        trials : 
+        
+        """
+        data = h5py.File(data_path, 'r')
+
+        if 'GoodUnits' in data:
+            good_units = data['GoodUnits'][:].ravel().astype('int') - 1
+        else:
+            good_units = None
+
         trials = []
         bad_trials = np.array([])
 
@@ -34,7 +157,6 @@ class BG():
         n_trials = trial_data['time'].shape[0]
 
         for idx in range(n_trials):
-            print(idx)
             trial = Trial()
 
             # important times in the trial #
@@ -111,25 +233,20 @@ class BG():
 
                 # extract spike times
                 spike_time_data = unit_data['spkTimes']
-                spike_rate_data = unit_data['rate']
                 n_units = spike_time_data.size
                 spike_times = []
-                spike_rates = []
 
                 # iterate over units
                 for unit in range(n_units):
                     spike_times.append(
                         data[spike_time_data[unit, 0]][:].ravel()
                     )
-                    spike_rates.append(
-                        data[spike_rate_data[unit, 0]][:].ravel()
-                    )
 
                 trial.spike_times = spike_times
-                trial.spike_rates = spike_rates
 
             trials.append(trial)
-        return trials, bad_trials
+        data.close()
+        return trials, bad_trials, good_units
 
     @staticmethod
     def decode_event_condition(event, code):
@@ -225,7 +342,42 @@ class BG():
 
 class Trial():
     def __init__(self, **kwargs):
-        # important times in the trial
+        """Acts as a struct to store information about a trial in the
+        experiment.
+
+        Attributes
+        ----------
+        t_trial_start : int
+            The time, in seconds, when the trial started.
+
+        t_center_cue : int
+            The time, in seconds, when the center cue turned on.
+
+        t_center_in : int
+            The time, in seconds, when the rat entered the center port.
+
+        t_side_cue : int
+            The time, in seconds, when the tone cued to move to the side.
+            If the rat failed pre-tone, this attribute is None.
+
+        t_center_out : int
+            The time, in seconds, when the rat left the center port.
+
+        t_side_in : int
+            The time, in seconds, when the rat entered the side port.
+            If the rat did not enter the side port, this attribute is None.
+
+        t_trial_end : int
+            The time, in seconds, when the trial ended.
+
+        events : dict
+            Contains the event codes detailing the experimental conditions of
+            the trial.
+
+        spike_times : list of ndarrays
+            List of arrays containing the times, in seconds, that each unit
+            spiked.
+        """
         self.t_trial_start = kwargs.get('t_trial_start', None)
         self.t_center_cue = kwargs.get('t_center_cue', None)
         self.t_center_in = kwargs.get('t_center_in', None)
@@ -234,18 +386,25 @@ class Trial():
         self.t_side_in = kwargs.get('t_side_in', None)
         self.t_trial_end = kwargs.get('t_trial_end', None)
 
-        self.trials = kwargs.get('trials', None)
         self.events = kwargs.get('events', None)
         self.spike_times = kwargs.get('spike_times', None)
-        self.spike_rates = kwargs.get('spike_rates', None)
 
     def is_valid_trial(self):
+        """Checks whether this Trial object was a valid trial."""
         if self.events is None:
             raise AttributeError('Trial has no events attribute.')
         return self.events['pre_tone'] != 0
 
     def is_pretone_success(self):
+        """Checks whether this Trial object resulted in a pre-tone success."""
         if self.events is None:
             raise AttributeError('Trial has no events attribute.')
 
         return self.events['pre_tone'] == 2
+
+    def is_pretone_failure(self):
+        """Checks whether this Trial object resulted in a pre-tone failure."""
+        if self.events is None:
+            raise AttributeError('Trial has no events attribute.')
+
+        return self.events['pre_tone'] == 1
