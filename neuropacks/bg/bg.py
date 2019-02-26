@@ -13,6 +13,8 @@ class BG():
         # populate list of trials
         self.trials, self.bad_trials, self.good_units = \
             self.populate_trials(self.data_path)
+
+        self.n_good_units = self.good_units.size
         self.n_trials = len(self.trials)
 
         # obtain good trials
@@ -80,6 +82,42 @@ class BG():
 
         return binned_spikes, bins
 
+    def get_successful_left_trials(self):
+        """Get the trial indices for which the rat successfully moved to the
+        left port."""
+        indices = np.array([
+            idx for idx, trial in enumerate(self.trials)
+            if trial.events['go'] == 1
+        ])
+        return indices
+
+    def get_successful_right_trials(self):
+        """Get the trial indices for which the rat successfully moved to the
+        right port."""
+        indices = np.array([
+            idx for idx, trial in enumerate(self.trials)
+            if trial.events['go'] == 2
+        ])
+        return indices
+
+    def get_successful_go_trials(self):
+        """Get the trial indices for which the rat successfully completed a
+        GO."""
+        indices = np.array([
+            idx for idx, trial in enumerate(self.trials)
+            if trial.is_successful_go()
+        ])
+        return indices
+
+    def get_successful_stop_trials(self):
+        """Get the trial indices for which the rat successfully completed a
+        STOP."""
+        indices = np.array([
+            idx for idx, trial in enumerate(self.trials)
+            if trial.is_successful_stop()
+        ])
+        return indices
+
     def get_firing_rate(
         self, trial, unit, sampling_rate=500, sigma=0.03, bounds=None,
         kernel_extent=(-2, 2)
@@ -139,15 +177,10 @@ class BG():
 
         Returns
         -------
-        trials : 
-        
+        trials :
+
         """
         data = h5py.File(data_path, 'r')
-
-        if 'GoodUnits' in data:
-            good_units = data['GoodUnits'][:].ravel().astype('int') - 1
-        else:
-            good_units = None
 
         trials = []
         bad_trials = np.array([])
@@ -245,6 +278,14 @@ class BG():
                 trial.spike_times = spike_times
 
             trials.append(trial)
+
+        # get good units
+        if 'GoodUnits' in data:
+            good_units = data['GoodUnits'][:].ravel().astype('int') - 1
+        else:
+            # assume all units are good
+            good_units = np.arange(n_units)
+
         data.close()
         return trials, bad_trials, good_units
 
@@ -408,3 +449,33 @@ class Trial():
             raise AttributeError('Trial has no events attribute.')
 
         return self.events['pre_tone'] == 1
+
+    def is_successful_left(self):
+        """Checks whether this trial resulted in a successful left to side
+        port."""
+        if self.events is None:
+            raise AttributeError('Trial has no events attribute.')
+
+        return self.events['go'] == 1
+
+    def is_successful_right(self):
+        """Checks whether this trial resulted in a successful right to side
+        port."""
+        if self.events is None:
+            raise AttributeError('Trial has no events attribute.')
+
+        return self.events['go'] == 2
+
+    def is_successful_stop(self):
+        """Checks whether the rat successfully stopped on this trial."""
+        if self.events is None:
+            raise AttributeError('Trial has no events attribute.')
+
+        return self.events['go_vs_stop'] == 1
+
+    def is_successful_go(self):
+        """Checks whether the rat successfully completed a go trial."""
+        if self.events is None:
+            raise AttributeError('Trial has no events attribute.')
+
+        return self.events['go_vs_stop'] == 3
