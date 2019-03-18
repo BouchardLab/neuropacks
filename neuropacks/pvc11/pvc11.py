@@ -217,7 +217,7 @@ class PVC11():
         return angles, tuning_curve
 
     @staticmethod
-    def get_tuning_modulation_and_preference(self, form, tuning_coefs):
+    def get_tuning_modulation_and_preference(form, tuning_coefs):
         """Extracts the tuning modulation and preference from a set
         of tuning coefficients.
 
@@ -239,19 +239,38 @@ class PVC11():
             The preference (location of tuning maximum) for each neuron.
         """
 
-        if form == 'cosine' or form == 'cosine2':
-            c1 = tuning_coefs[:, 0]
-            c2 = tuning_coefs[:, 1]
+        if form == 'cosine':
+            # y = b0 + c1 cos(x) + c2 sin(x)
+            c1 = tuning_coefs[..., 0]
+            c2 = tuning_coefs[..., 1]
+            # convert preferences to degrees and ensure it's within [0, 360)
             preferences = np.arctan2(c2, c1) * (180/np.pi)
             preferences[preferences < 0] += 360
             preferences_rad = np.deg2rad(preferences)
-            modulations = \
+            # y = b0 + b1 * cos(x - preferences)
+            # multiply b1 by 2 in order to get the modulation
+            modulations = 2 * \
                 (c2 - c1)/(np.sin(preferences_rad) - np.cos(preferences_rad))
 
+        elif form == 'cosine2':
+            # y = b0 + c1 cos(2x) + c2 sin(2x)
+            c1 = tuning_coefs[..., 0]
+            c2 = tuning_coefs[..., 1]
+            # convert preferences to degrees and ensure it's within [0, 360)
+            preferences = np.arctan2(c2, c1) * (180/np.pi)
+            preferences[preferences < 0] += 360
+            preferences_rad = np.deg2rad(preferences)
+            # y = b0 + b1 * cos(2 (x - preferences))
+            modulations = 2 * \
+                (c2 - c1)/(np.sin(preferences_rad) - np.cos(preferences_rad))
+            # divide preferences by 2 and take the modulus to ensure preference
+            # lies within [0, 180)
+            preferences = (preferences / 2) % 180
+
         elif form == 'one_hot':
-            preferences = 30 * np.argmax(tuning_coefs, axis=1)
+            preferences = 30 * np.argmax(tuning_coefs, axis=-1)
             modulations = \
-                np.max(tuning_coefs, axis=1) - np.min(tuning_coefs, axis=1)
+                np.max(tuning_coefs, axis=-1) - np.min(tuning_coefs, axis=-1)
 
         else:
             raise ValueError('Form %s is not available.' % form)
