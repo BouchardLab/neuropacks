@@ -91,6 +91,10 @@ class PVC11():
         form : string
             The structure of the design matrix.
 
+        angles : ndarray
+            The angles to obtain a design matrix for. If None, all angles will
+            be used.
+
         Returns
         -------
         X : nd-array, shape (n_trials, n_features)
