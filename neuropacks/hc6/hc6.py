@@ -101,3 +101,20 @@ class HC6():
                             self.spike_times[day][epoch][unit_idx] = \
                                 np.array([])
                         unit_idx += 1
+
+    def get_tuning_matrix(self, day, epoch, n_gaussians):
+        positions = self.positions[day][epoch]
+        xs = positions['x']
+        ys = positions['y']
+
+        x_std = np.std(xs)
+        y_std = np.std(ys)
+        x_means = x_std * np.linspace(-2, 2, n_gaussians) + xs.mean()
+        y_means = y_std * np.linspace(-2, 2, n_gaussian) + ys.mean()
+
+        tuning_std_x = x_std / 2
+        tuning_std_y = y_std / 2
+
+        X = np.zeros(())
+        for idx, (x, y) in enumerate(zip(xs, ys)):
+
