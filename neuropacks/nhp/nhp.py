@@ -87,6 +87,39 @@ class NHP:
 
         data.close()
 
+    def get_binned_positions(self, bin_width=0.5):
+        """Bin the mouse positions according to a bin width.
+
+        Parameters
+        ----------
+        bin_width : float
+            The width of the bin, in seconds.
+
+        Returns
+        -------
+        x_binned : ndarray
+            The mean x position in each bin.
+
+        y_binned : ndarray
+            The mean y position in each bin.
+        """
+        # calculate number of bins
+        n_bins = int(np.ceil(
+            (self.timestamps[-1] - self.timestamps[0])/bin_width
+        ))
+        bins = np.arange(n_bins + 1) * bin_width + self.timestamps[0]
+        bin_indices = np.digitize(self.timestamps, bins=bins) - 1
+
+        cursor_pos_binned = np.zeros((n_bins, 2))
+
+        for bin_idx in range(n_bins):
+            indices = np.argwhere(bin_indices == bin_idx).ravel()
+            cursor_pos_binned[bin_idx] = np.mean(
+                self.cursor_pos[:, indices], axis=1
+            ).T
+
+        return cursor_pos_binned
+
     def get_response_matrix(
         self, bin_width, region='M1', transform='square_root'
     ):
