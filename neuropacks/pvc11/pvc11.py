@@ -83,7 +83,7 @@ class PVC11():
         angles = np.linspace(0, 360, self.n_stimuli + 1)[:-1]
         return angles
 
-    def get_design_matrix(self, form='angle', angles=None):
+    def get_design_matrix(self, form='angle', angles=None, **kwargs):
         """Create design matrix according to a specified form.
 
         Parameters
@@ -131,10 +131,34 @@ class PVC11():
                 angle_idx = np.asscalar(np.argwhere(unique_angles == angle))
                 X[idx, angle_idx] = 1
 
-        elif form == 'gaussian':
-            X = np.zeros((angles.size, 2))
-            X[:, 0] = np.deg2rad(angles)
-            X[:, 1] = np.deg2rad(angles)**2
+        elif form == 'gbf':
+            n_bf = kwargs.get('n_bf', 20)
+            lower_bound = kwargs.get('lower_bound', 15)
+            upper_bound = kwargs.get('upper_bound', 345)
+            var = kwargs.get('var', 25)
+            
+            means = np.linspace(lower_bound, upper_bound, n_bf)
+            norm = 1./np.sqrt(2 * np.pi * var)
+            # norm = 1.
+
+            X = np.zeros((angles.size, n_bf))
+
+            for idx, angle in enumerate(angles):
+                X[idx] = norm * np.exp(
+                    -(angle - means)**2 / (2 * var)
+                )
+
+        elif form == 'cbf':
+            n_bf = kwargs.get('n_bf', 20)
+            lower_bound = kwargs.get('lower_bound', 15)
+            upper_bound = kwargs.get('upper_bound', 345)
+            
+            means = np.linspace(lower_bound, upper_bound, n_bf)
+
+            X = np.zeros((angles.size, n_bf))
+
+            for idx, angle in enumerate(angles):
+                X[idx] = np.cos(2 * np.deg2rad(angle - means))
 
         else:
             raise ValueError("Incorrect design matrix form specified.")
