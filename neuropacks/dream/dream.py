@@ -917,7 +917,7 @@ class DREAM:
         return angle
 
     @staticmethod
-    def get_tuning_modulation_and_preference(self, form, tuning_coefs):
+    def get_tuning_modulation_and_preference(form, tuning_coefs):
         """Extracts the tuning modulation and preference from a set
         of tuning coefficients.
 

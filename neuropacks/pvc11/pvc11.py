@@ -136,7 +136,7 @@ class PVC11():
             lower_bound = kwargs.get('lower_bound', 15)
             upper_bound = kwargs.get('upper_bound', 345)
             var = kwargs.get('var', 25)
-            
+
             means = np.linspace(lower_bound, upper_bound, n_bf)
             norm = 1./np.sqrt(2 * np.pi * var)
             # norm = 1.
@@ -149,10 +149,10 @@ class PVC11():
                 )
 
         elif form == 'cbf':
-            n_bf = kwargs.get('n_bf', 20)
-            lower_bound = kwargs.get('lower_bound', 15)
-            upper_bound = kwargs.get('upper_bound', 345)
-            
+            n_bf = kwargs.get('n_bf', 30)
+            lower_bound = kwargs.get('lower_bound', 0)
+            upper_bound = kwargs.get('upper_bound', 360)
+
             means = np.linspace(lower_bound, upper_bound, n_bf)
 
             X = np.zeros((angles.size, n_bf))
@@ -244,8 +244,7 @@ class PVC11():
 
         return angles, tuning_curve
 
-    @staticmethod
-    def get_tuning_modulation_and_preference(form, tuning_coefs):
+    def get_tuning_modulation_and_preference(self, form, tuning_coefs):
         """Extracts the tuning modulation and preference from a set
         of tuning coefficients.
 
