@@ -399,7 +399,7 @@ class ECOG:
         )
         return frequencies, tuning_curve
 
-    def calculate_modulation(self, tuning, tuning_coefs):
+    def get_modulation(self, tuning, tuning_coefs):
         """Calculates tuning modulation given a set of tuning coefficients.
 
         Parameters
@@ -418,7 +418,7 @@ class ECOG:
         # if we're dealing with basis functions, we need to calculate the
         # tuning curve
         if tuning == 'bf':
-            _, tuning_curve = self.create_tuning_curve(
+            _, tuning_curve = self.get_tuning_curve(
                 tuning_coefs=tuning_coefs
             )
             modulation = np.max(tuning_curve) - np.min(tuning_curve)
@@ -432,7 +432,7 @@ class ECOG:
 
         return modulation
 
-    def calculate_preference(self, tuning, tuning_coefs):
+    def get_preference(self, tuning, tuning_coefs):
         """Calculates tuning preference given a set of tuning coefficients.
 
         Parameters
@@ -451,7 +451,7 @@ class ECOG:
         # if we're dealing with basis functions, we need to calculate the
         # tuning curve
         if tuning == 'bf':
-            frequencies, tuning_curve = self.create_tuning_curve(
+            frequencies, tuning_curve = self.get_tuning_curve(
                 tuning_coefs=tuning_coefs
             )
             preference_idx = np.argmax(tuning_curve).ravel()
