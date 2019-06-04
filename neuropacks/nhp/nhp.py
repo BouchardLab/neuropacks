@@ -59,7 +59,7 @@ class NHP:
         # iterate over channels
         for idx, channel in enumerate(data['chan_names'][0]):
             # extract the channel name as a string
-            channel_name = data[channel].value.tobytes()[::2].decode()
+            channel_name = data[channel][:].tobytes()[::2].decode()
             # extract region and channel index from channel name
             region, channel_idx = channel_name.split(' ')
             channel_idx = int(channel_idx)
