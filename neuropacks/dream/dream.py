@@ -408,7 +408,7 @@ class DREAM:
         )
 
         if stim_onset is not None:
-            stim_onset_idx, stim_onset_time, target = stim_onset
+            stim_onset_idx, stim_onset_time, _ = stim_onset
 
             # get hand position for trial
             hand_position = self.get_hand_pos_for_trial(
@@ -485,7 +485,7 @@ class DREAM:
         )
 
         # get movement onset
-        onset_idx, onset_time, hand_pos_onset = \
+        _, onset_time, _ = \
             self.get_movement_onset_for_trial(
                 subject_idx=subject_idx,
                 trial_idx=trial_idx,
@@ -633,12 +633,12 @@ class DREAM:
         """
         # get onset time
         if onset == 'stimulus':
-            onset_idx, onset_time, _ = self.get_stim_onset_for_trial(
+            _, onset_time, _ = self.get_stim_onset_for_trial(
                 subject_idx=subject_idx,
                 trial_idx=trial_idx)
 
         elif onset == 'movement':
-            onset_idx, onset_time, _ = self.get_movement_onset_for_trial(
+            _, onset_time, _ = self.get_movement_onset_for_trial(
                 subject_idx=subject_idx,
                 trial_idx=trial_idx,
                 tol=tol,
@@ -885,7 +885,7 @@ class DREAM:
         ax.set_yticks([])
         ax.set_yticklabels([])
 
-        return ax
+        return fig, ax
 
     @staticmethod
     def calculate_angle(start, end):
