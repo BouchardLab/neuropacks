@@ -418,7 +418,7 @@ class RET1:
 
         elif method == 'UoI_Lasso':
             fitter = UoI_Lasso(
-                normalize=kwargs.get('normalize', True),
+                standardize=kwargs.get('standardize', True),
                 n_boots_sel=kwargs.get('n_boots_sel', 30),
                 n_boots_est=kwargs.get('n_boots_est', 30),
                 selection_frac=kwargs.get('selection_frac', 0.8),
