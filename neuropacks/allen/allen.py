@@ -109,7 +109,7 @@ class Allen():
         # one-hot encoding for unique stimulus values
         elif design == 'one-hot':
             unique = np.unique(stimulus)
-            n_features = unique
+            n_features = unique.size
             X = np.zeros((n_samples, n_features))
 
             for sample in range(n_samples):
@@ -119,7 +119,7 @@ class Allen():
         else:
             raise ValueError('Incorrect design matrix.')
 
-        return design
+        return X
 
     def get_response_matrix(self, experiment_id, stimulus_name):
         """Calculates a responses matrix over cells for a specific stimulus
@@ -161,10 +161,20 @@ class Allen():
         starts = table['start'].values
         ends = table['end'].values
         n_samples = table.shape[0]
+        n_cells = dffs.shape[0]
 
         # get mean responses to each stimulus
-        responses = np.array([
-            np.mean(dffs[:, starts[idx]:ends[idx]], axis=1) for idx in range(n_samples)
-        ])
+        if stimulus_name == 'drifting_gratings':
+            responses = np.array([
+                np.mean(dffs[:, starts[idx]:ends[idx]], axis=1)
+                for idx in range(n_samples)])
+        elif stimulus_name == 'static_gratings':
+            responses = np.zeros((n_samples, n_cells))
+            for sample in range(n_samples):
+                start_idx = int(starts[sample])
+                end_idx = np.argwhere(
+                    ((timestamps[start_idx] + 0.5) - timestamps) < 0
+                ).ravel()[0]
+                responses[sample] = np.mean(dffs[:, start_idx:end_idx], axis=1)
 
         return responses

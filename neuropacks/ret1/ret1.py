@@ -425,7 +425,7 @@ class RET1:
                 estimation_frac=kwargs.get('estimation_frac', 0.8),
                 n_lambdas=kwargs.get('n_lambdas', 30),
                 stability_selection=kwargs.get('stability_selection', 1.),
-                estimation_score=kwargs.get('estimation_score', 'BIC')
+                estimation_score=kwargs.get('estimation_score', 'AIC')
             )
 
         else:
