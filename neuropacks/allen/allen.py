@@ -61,6 +61,23 @@ class Allen():
 
         return ophys_experiment_id
 
+    def get_cell_specimen_ids(self, ophys_experiment_id):
+        """Gets the cell specimen ids for a specific experiment.
+
+        Parameters
+        ----------
+        ophys_experiment_id : int
+            The id for the specific session.
+
+        Returns
+        -------
+        cell_specimen_ids : ndarray
+            The ids for the cells in the experiment.
+        """
+        data = self.boc.get_ophys_experiment_data(ophys_experiment_id)
+        cell_specimen_ids = data.get_cell_specimen_ids()
+        return cell_specimen_ids
+
     def get_design_matrix(self, experiment_id, stimulus_name, stimulus_key, design):
         """Gets the experiment id for the session corresponding to a desired
         stimulus within an experiment.
