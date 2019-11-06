@@ -1,12 +1,7 @@
 import numpy as np
 from scipy.io import loadmat
 
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import RidgeCV
-from sklearn.linear_model import LassoCV
 from sklearn.metrics import r2_score
-
-from pyuoi import UoI_Lasso
 
 
 class RET1:
@@ -402,14 +397,17 @@ class RET1:
 
         # create object to perform fitting
         if method == 'OLS':
+            from sklearn.linear_model import LinearRegression
             fitter = LinearRegression()
 
         elif method == 'Ridge':
+            from sklearn.linear_model import RidgeCV
             fitter = RidgeCV(
                 cv=kwargs.get('cv', 5)
             )
 
         elif method == 'Lasso':
+            from sklearn.linear_model import LassoCV
             fitter = LassoCV(
                 normalize=kwargs.get('normalize', True),
                 cv=kwargs.get('cv', 5),
@@ -417,6 +415,7 @@ class RET1:
             )
 
         elif method == 'UoI_Lasso':
+            from pyuoi.linear_model import UoI_Lasso
             fitter = UoI_Lasso(
                 standardize=kwargs.get('standardize', True),
                 n_boots_sel=kwargs.get('n_boots_sel', 30),
