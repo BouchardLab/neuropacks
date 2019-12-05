@@ -1,5 +1,5 @@
-
-# Created by https://www.gitignore.io/api/macos,latex,python,jupyternotebook
+# brain observatory data
+brain_observatory/
 
 ### JupyterNotebook ###
 .ipynb_checkpoints

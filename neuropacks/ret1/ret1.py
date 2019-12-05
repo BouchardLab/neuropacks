@@ -228,7 +228,7 @@ class RET1:
         return n_features, n_samples, timestamps
 
     def get_responses_for_recording(
-        self, recording_idx, window_length=0.5, cells=None
+        self, recording_idx, window_length=0.5, cells=None, normalize=True
     ):
         """Create response matrix for specified recording, window length, and
         choice of cells.
@@ -281,7 +281,10 @@ class RET1:
 
             # put binned spike counts in response matrix
             n_spikes = np.sum(binned_spikes)
-            responses[:, idx] = binned_spikes / n_spikes
+            if normalize:
+                responses[:, idx] = binned_spikes / n_spikes
+            else:
+                responses[:, idx] = binned_spikes
 
         return responses
 
