@@ -21,4 +21,4 @@
 *.pyo    binary
 
 # Jupyter notebook
-*.ipynb  text
+*.ipynb  linguist-documentation
