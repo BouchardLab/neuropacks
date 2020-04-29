@@ -100,7 +100,6 @@ class PVC11():
         X : nd-array, shape (n_trials, n_features)
             The design matrix.
         """
-
         if angles is None:
             unique_angles = self.get_angles()
             angles = np.repeat(unique_angles, self.n_trials)

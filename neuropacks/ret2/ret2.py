@@ -96,8 +96,65 @@ class RET2:
             raise ValueError('Invalid type for cells.')
         return cells
 
-    def get_design_matrix(self, cells='all', response='max'):
-        """Obtains a design matrix from the cellular responses.
+    def get_design_matrix(self, form='angle', **kwargs):
+        """Create design matrix according to a specified form.
+
+        Parameters
+        ----------
+        form : string
+            The structure of the design matrix.
+
+        Returns
+        -------
+        X : nd-array, shape (n_trials, n_features)
+            The design matrix.
+        """
+        angles = self.angles
+        unique_angles = self.unique_angles
+
+        if form == 'angle':
+            # the angles for each trial; no extra dimension required
+            X = angles
+
+        elif form == 'label':
+            X = (angles/30).astype('int64')
+
+        elif form == 'cosine':
+            X = np.zeros((angles.size, 2))
+            X[:, 0] = np.cos(np.deg2rad(angles))
+            X[:, 1] = np.sin(np.deg2rad(angles))
+
+        elif form == 'cosine2':
+            X = np.zeros((angles.size, 2))
+            X[:, 0] = np.cos(2 * np.deg2rad(angles))
+            X[:, 1] = np.sin(2 * np.deg2rad(angles))
+
+        elif form == 'one_hot':
+            X = np.zeros((angles.size, unique_angles.size))
+
+            for idx, angle in enumerate(angles):
+                angle_idx = np.asscalar(np.argwhere(unique_angles == angle))
+                X[idx, angle_idx] = 1
+
+        elif form == 'cbf':
+            n_bf = kwargs.get('n_bf', 30)
+            lower_bound = kwargs.get('lower_bound', 0)
+            upper_bound = kwargs.get('upper_bound', 360)
+
+            means = np.linspace(lower_bound, upper_bound, n_bf)
+
+            X = np.zeros((angles.size, n_bf))
+
+            for idx, angle in enumerate(angles):
+                X[idx] = np.cos(2 * np.deg2rad(angle - means))
+
+        else:
+            raise ValueError("Incorrect design matrix form specified.")
+
+        return X
+
+    def get_response_matrix(self, cells='all', response='max'):
+        """Obtains a response matrix from the cellular responses.
 
         Parameters
         ----------
