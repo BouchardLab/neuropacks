@@ -1,3 +1,4 @@
+from .ac1.ac1 import AC1
 from .allen.allen import Allen
 from .dream.dream import DREAM
 from .ecog.ecog import ECOG
@@ -9,7 +10,8 @@ from .bg.bg import BG
 from .hc6.hc6 import HC6
 
 
-__all__ = ["Allen",
+__all__ = ["AC1",
+           "Allen",
            "DREAM",
            "ECOG",
            "PVC11",

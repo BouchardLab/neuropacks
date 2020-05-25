@@ -138,7 +138,6 @@ class PVC11():
 
             means = np.linspace(lower_bound, upper_bound, n_bf)
             norm = 1./np.sqrt(2 * np.pi * var)
-            # norm = 1.
 
             X = np.zeros((angles.size, n_bf))
 
