@@ -1,8 +1,6 @@
 import numpy as np
 import warnings
 
-from allensdk.core.brain_observatory_cache import BrainObservatoryCache
-
 warnings.simplefilter('ignore')
 
 
@@ -19,6 +17,7 @@ class Allen():
         The object containing the cached BrainObservatory data.
     """
     def __init__(self, manifest_file=None):
+        from allensdk.core.brain_observatory_cache import BrainObservatoryCache
         self.manifest_file = manifest_file
         self.boc = BrainObservatoryCache(manifest_file=manifest_file)
 
