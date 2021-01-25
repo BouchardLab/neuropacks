@@ -1,5 +1,6 @@
 from .ac1.ac1 import AC1
 from .allen.allen import Allen
+from .cv.cv import CV
 from .dream.dream import DREAM
 from .ecog.ecog import ECOG
 from .pvc11.pvc11 import PVC11
@@ -12,6 +13,7 @@ from .hc6.hc6 import HC6
 
 __all__ = ["AC1",
            "Allen",
+           "CV",
            "DREAM",
            "ECOG",
            "PVC11",
