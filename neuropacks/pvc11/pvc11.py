@@ -228,11 +228,11 @@ class PVC11():
 
         Parameters
         ----------
+        tuning_coefs : nd-array, shape (n_neurons, n_features)
+            The coefficients describing the tuning of each neuron.
         form : string
             The type of design matrix used. Valid options are "angle",
             "cosine", "cosine_speed", "one_hot", and "speed_hot".
-        tuning_coefs : nd-array, shape (n_neurons, n_features)
-            The coefficients describing the tuning of each neuron.
 
         Returns
         -------
@@ -241,6 +241,9 @@ class PVC11():
         preferences : nd-array of floats
             The preference (location of tuning maximum) for each neuron.
         """
+        if tuning_coefs.ndim == 1:
+            tuning_coefs = tuning_coefs[np.newaxis]
+
         if form == 'cosine':
             # Splt up cosine coefficients
             c1 = tuning_coefs[..., 0]
@@ -254,7 +257,7 @@ class PVC11():
                                            - np.cos(preferences_rad))
 
         elif form == 'cosine2':
-            # Splt up cosine coefficients
+            # Split up cosine coefficients
             c1 = tuning_coefs[..., 0]
             c2 = tuning_coefs[..., 1]
             # Get preferences in degrees and restrict range to [0, 360)
