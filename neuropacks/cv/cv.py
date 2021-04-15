@@ -19,8 +19,11 @@ class CV:
             self.cvs = data['cvs'][:].astype('str')
             self.speakers = data['speakers'][:]
             self.cv_accuracy = data['cv_accuracy'][:]
+            self.cv_accuracy_baseline = data['cv_accuracy_baseline'][:]
             self.c_accuracy = data['c_accuracy'][:]
+            self.c_accuracy_baseline = data['c_accuracy_baseline'][:]
             self.v_accuracy = data['v_accuracy'][:]
+            self.v_accuracy_baseline = data['v_accuracy_baseline'][:]
 
         # Get consonants and vowels
         self.cs = np.array([cv[:-1] for cv in self.cvs])
@@ -58,7 +61,7 @@ class CV:
         else:
             raise ValueError("Incorrect stimulus input.")
 
-    def get_response_matrix(self, stimulus='cv'):
+    def get_response_matrix(self, stimulus='cv', norm=False):
         """Extracts the response matrix. Chooses the 'response' timepoint
         according to the stimulus.
 
@@ -66,6 +69,9 @@ class CV:
         ----------
         stimulus : string
             The stimulus to use: either 'cv', 'c', or 'v'.
+        norm : bool
+            If True, get the timepoint according to the normalized maximum
+            accuracy.
 
         Returns
         -------
@@ -74,13 +80,20 @@ class CV:
         """
         # Identify the best response time for stimulus
         if stimulus == 'cv':
-            timepoint = np.argmax(self.cv_accuracy)
+            metric = self.cv_accuracy
+            baseline = self.cv_accuracy_baseline
         elif stimulus == 'c':
-            timepoint = np.argmax(self.c_accuracy)
+            metric = self.c_accuracy
+            baseline = self.c_accuracy_baseline
         elif stimulus == 'v':
-            timepoint = np.argmax(self.v_accuracy)
+            metric = self.v_accuracy
+            baseline = self.v_accuracy_baseline
         else:
             raise ValueError("Incorrect stimulus input.")
         # Get response matrix at specific timepoint
+        if norm:
+            timepoint = np.argmax(metric / baseline)
+        else:
+            timepoint = np.argmax(metric)
         X = self.X[:, timepoint, :]
         return X
