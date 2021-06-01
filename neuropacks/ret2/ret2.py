@@ -14,40 +14,28 @@ class RET2:
     ----------
     data_path : string
         The location of the dataset.
-
     angles : np.ndarray, shape (n_samples,)
         The angle for each trial.
-
     unique_angles : np.ndarray
         The (sorted) unique angles.
-
     responses : np.ndarray, shape (n_cells, n_timestamps)
         The responses across the entire timecourse for each cell.
-
     responses_by_stim : np.ndarray, shape (n_cells, n_samples, n_timestamps)
         The responses across cells, for each stimulus.
-
     timestamps : np.ndarray
         The timestamps for the recording session.
-
     tuned_cells : np.ndarray
         The indices for the tuned cells.
-
     n_cells : int
         The number of cells in the dataset.
-
     n_samples : int
         The number of samples in the dataset.
-
     n_trials : int
         The number of repetitions per angle.
-
     n_timestamps_stim : int
         The number of timestamps per stimulus window.
-
     n_timestamps : int
         The total number of timestamps over the recording session.
-
     n_angles : int
         The number of unique angles.
     """
@@ -96,7 +84,7 @@ class RET2:
             raise ValueError('Invalid type for cells.')
         return cells
 
-    def get_design_matrix(self, form='angle', **kwargs):
+    def get_design_matrix(self, form='angle', angles=None):
         """Create design matrix according to a specified form.
 
         Parameters
@@ -109,8 +97,8 @@ class RET2:
         X : nd-array, shape (n_trials, n_features)
             The design matrix.
         """
-        angles = self.angles
-        unique_angles = self.unique_angles
+        if angles is None:
+            angles = np.copy(self.angles)
 
         if form == 'angle':
             # the angles for each trial; no extra dimension required
@@ -129,25 +117,6 @@ class RET2:
             X[:, 0] = np.cos(2 * np.deg2rad(angles))
             X[:, 1] = np.sin(2 * np.deg2rad(angles))
 
-        elif form == 'one_hot':
-            X = np.zeros((angles.size, unique_angles.size))
-
-            for idx, angle in enumerate(angles):
-                angle_idx = np.asscalar(np.argwhere(unique_angles == angle))
-                X[idx, angle_idx] = 1
-
-        elif form == 'cbf':
-            n_bf = kwargs.get('n_bf', 30)
-            lower_bound = kwargs.get('lower_bound', 0)
-            upper_bound = kwargs.get('upper_bound', 360)
-
-            means = np.linspace(lower_bound, upper_bound, n_bf)
-
-            X = np.zeros((angles.size, n_bf))
-
-            for idx, angle in enumerate(angles):
-                X[idx] = np.cos(2 * np.deg2rad(angle - means))
-
         else:
             raise ValueError("Incorrect design matrix form specified.")
 
@@ -162,7 +131,6 @@ class RET2:
             The cells to query from the responses. If 'all' (default),
             responses from all cells are used. If 'tuned', only the tuned
             cells are used. If np.ndarray, those indices are used directly.
-
         response : string
             How to calculate the response using the flourescence across time.
             Default is 'max', where the maximum for each trial constitutes the
@@ -192,7 +160,6 @@ class RET2:
             The cells to query from the responses. If 'all' (default),
             responses from all cells are used. If 'tuned', only the tuned
             cells are used. If np.ndarray, those indices are used directly.
-
         response : string
             How to calculate the response using the flourescence across time.
             Default is 'max', where the maximum for each trial constitutes the
@@ -210,3 +177,40 @@ class RET2:
         for idx, angle in enumerate(self.unique_angles):
             X_trial_avg[idx] = X[self.angles == angle].mean(axis=0)
         return X_trial_avg
+
+    def get_tuning_curve(self, form, tuning_coefs, intercept=None, angles=None):
+        """Gets the tuning curve given a set of tuning coefficients.
+
+        Parameters
+        ----------
+        form : string
+            The type of design matrix used. Valid options are "angle",
+            "cosine", "cosine_speed", "one_hot", and "speed_hot".
+        tuning_coefs : nd-array, shape (n_features)
+            The coefficients describing the tuning of the neuron.
+        intercept : float, optional
+            The intercept.
+        angles : ndarray
+            The angles over which to calculate the tuning curve. If None, a
+            default set is used.
+
+        Returns
+        -------
+        tuning_curve : ndarray
+            The responses across the set of angles.
+        """
+        # If no angles are provided, calculate a set
+        if angles is None:
+            angles = np.linspace(self.unique_angles[0],
+                                 self.unique_angles[-1],
+                                 1000)
+
+        # Calculate design matrix for angles
+        X = self.get_design_matrix(form=form, angles=angles)
+
+        # Calculate tuning curve
+        tuning_curve = np.dot(X, tuning_coefs)
+        if intercept is not None:
+            tuning_curve += intercept
+
+        return angles, tuning_curve
