@@ -69,6 +69,13 @@ class ECOG:
         self.bands = np.array(['B', 'G', 'HG', 'UHG', 'MUAR', 'tMUA'])
         # Read in grid
         self.read_grid(grid_path)
+        # PAC electrodes
+        self.pac_idxs = np.array([
+            1, 8, 9, 16, 17, 18, 24, 25, 26, 28, 33, 35, 37, 39, 41, 42, 43, 44,
+            45, 48, 49, 50, 51, 52, 53, 54, 55, 57, 74, 76, 77, 78, 79, 95, 97,
+            98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111,
+            112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124,
+            125, 126, 127])
 
     def band_to_idx(self, band):
         """Converts a frequency band to the correct index in the data array.
@@ -160,7 +167,7 @@ class ECOG:
         return responses_per_electrode
 
     def get_response_matrix(
-        self, bounds, band, electrodes=None, transform=None
+        self, bounds, band, electrodes=None, amps=None, transform=None
     ):
         """Creates the response matrix.
 
@@ -190,8 +197,14 @@ class ECOG:
             bounds=bounds,
             band=band,
             electrodes=electrodes)
+        if amps is not None:
+            responses_per_electrode = responses_per_electrode[:, amps, :, :]
+            n_stim_amps = len(amps)
+        else:
+            n_stim_amps = self.n_stim_amps
+
         Y = responses_per_electrode.reshape(
-            self.n_trials * self.n_stim_amps * self.n_stim_freqs, -1
+            self.n_trials * n_stim_amps * self.n_stim_freqs, -1
         )
         # Apply desired transform
         if transform == 'sqrt':
