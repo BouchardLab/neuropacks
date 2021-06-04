@@ -304,8 +304,8 @@ class ECOG:
         return X
 
     def get_tuning_curve(
-        self, tuning_coefs, frequencies=None, lower_log_freq=None,
-        upper_log_freq=None, var=0.64
+        self, tuning_coefs, intercepts=None, frequencies=None,
+        lower_log_freq=None, upper_log_freq=None, var=0.64
     ):
         """Creates a tuning curve from basis function coefficients.
 
@@ -335,6 +335,10 @@ class ECOG:
         """
         if tuning_coefs.ndim == 1:
             tuning_coefs = tuning_coefs[np.newaxis]
+        if intercepts is None:
+            intercepts = np.zeros(tuning_coefs.shape[0])
+        if isinstance(intercepts, float):
+            intercepts = np.array([intercepts])
         # Number of parameters
         n_curves, n_gaussians = tuning_coefs.shape
 
@@ -354,7 +358,7 @@ class ECOG:
         # Calculate outputs of tuning curves
         tuning_curves = np.zeros((n_curves, frequencies.size))
         for idx, tuning_coef in enumerate(tuning_coefs):
-            tuning_curves[idx] = np.sum(
+            tuning_curves[idx] = intercepts[idx] + np.sum(
                 tuning_coef * norm * np.exp(
                     -np.subtract.outer(log_freqs, means)**2 / (2 * var)
                 ), axis=1)
