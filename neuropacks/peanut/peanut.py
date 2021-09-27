@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import scipy
 import pickle
@@ -150,13 +151,29 @@ class Peanut_SingleEpoch():
         self.load(path, day=day, epoch=epoch)
 
     def load(self, path, day, epoch):
+        epoch_key = f'peanut_day{day}_epoch{int(epoch)}'
+
+        # load the preprocessed data from the day, and take specified epoch
         day_data = pickle.load(open(path, 'rb'))
-        # epoch data dict
-        data_dict = day_data[f'peanut_day{day}_epoch{int(epoch)}']
+        data_dict = day_data[epoch_key]
+
+        # also load information for getting linearized position,
+        # if available in the same folder
+        dirname, _ = os.path.split(path)
+        lin_basename = f'linearization_dict_peanut_day{day}.obj'
+        lin_path = os.path.join(dirname, lin_basename)
+        if os.path.isfile(lin_path):
+            linearization_dict = pickle.load(open(lin_path, 'rb'))
+            lin_dict = linearization_dict[epoch_key]
+        else:
+            lin_dict = None
+
+        # store epoch data as attributes
         self.data_dict = data_dict
         self.spike_times = data_dict['spike_times']
         self.meta = data_dict['identification']
         self.pos = data_dict['position_df']
+        self.lin_dict = lin_dict
 
     def bin(self, target_region='HPc', spike_threshold=None,
             bin_width=100, bin_type='time', bin_rep='left',
