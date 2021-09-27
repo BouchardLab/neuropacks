@@ -65,7 +65,7 @@ def get_spike_rates(units, bins, t0=0,
     return spike_rates
 
 
-def align_behavior(t, x, bins):
+def align_behavior(t, x, bins, return_bin_centers=False):
     # Offset to 0
     t -= t[0]
 
@@ -74,6 +74,8 @@ def align_behavior(t, x, bins):
     interpolator = interp1d(t, x)
     xaligned = interpolator(bin_centers)
 
+    if return_bin_centers:
+        return bin_centers, xaligned
     return xaligned
 
 
@@ -192,7 +194,7 @@ class Peanut_SingleEpoch():
                                       boxcox=boxcox, **filter_kwargs)
 
         # Align behavior with the binned spike rates
-        pos_binned = self.get_aligned_behavior(bins)
+        bin_centers, pos_binned = self.get_aligned_behavior(bins)
 
         # collect and return binned data
         dat = {}
@@ -214,5 +216,6 @@ class Peanut_SingleEpoch():
     def get_aligned_behavior(self, bins):
         t = self.pos['time'].values
         pos_linear = self.pos['position_linear'].values
-        pos_binned = align_behavior(t, pos_linear, bins)
-        return pos_binned
+        bin_centers, pos_binned = align_behavior(t, pos_linear, bins,
+                                                 return_bin_centers=True)
+        return bin_centers, pos_binned
