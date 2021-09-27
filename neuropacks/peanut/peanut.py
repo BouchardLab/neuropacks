@@ -86,7 +86,8 @@ def load_peanut(fpath, epoch, spike_threshold, bin_width=100, bin_type='time', b
         fpath: str
                path to file
         epoch: int
-            which epoch (session) to load. The rat is sleeping during even numbered epochs
+            which epoch (session) to load.
+            For day14, the rat is running during even numbered epochs.
         spike_threshold: int
               throw away neurons that spike less than the threshold during the epoch
         bin_width:     float
@@ -143,7 +144,8 @@ class Peanut_SingleEpoch():
         path: str
             path to file
         epoch: int
-            which epoch (session) to load. The rat is sleeping during even numbered epochs
+            which epoch (session) to load.
+            For day14, the rat is running during even numbered epochs.
         '''
         self.load(path, day=day, epoch=epoch)
 
