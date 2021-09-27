@@ -157,7 +157,8 @@ class Peanut_SingleEpoch():
         self.pos = data_dict['position_df']
 
     def bin(self, target_region='HPc', spike_threshold=None,
-            bin_width=100, bin_type='time', boxcox=0.5,
+            bin_width=100, bin_type='time', bin_rep='left',
+            boxcox=0.5,
             filter_fn='none', **filter_kwargs):
         '''
         spike_threshold: int
@@ -200,8 +201,16 @@ class Peanut_SingleEpoch():
         dat = {}
         dat['spike_rates'] = spike_rates
         dat['pos'] = pos_binned
-        # dat['times'] = (bins[1:] + bins[:-1]) / 2  # midpoints
-        dat['times'] = bins[:-1]  # left endpoints
+
+        if bin_rep == 'center':
+            dat['times'] = bin_centers  # midpoints
+        elif bin_rep == 'left':
+            dat['times'] = bins[:-1]    # left endpoints
+        elif bin_rep == 'right':
+            dat['times'] = bins[1:]     # right endpoints
+        else:
+            raise ValueError('bin_rep should be one of center, left or right.')
+
         return dat
 
     def collect_unit_spiking_times(self, target_region='HPc', spike_threshold=None):
