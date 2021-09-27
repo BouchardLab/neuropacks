@@ -133,3 +133,86 @@ def load_peanut(fpath, epoch, spike_threshold, bin_width=100, bin_type='time', b
     dat['pos'] = pos_linear
 
     return dat
+
+
+class Peanut_SingleEpoch():
+    def __init__(self, path, epoch, day=14):
+        '''
+        path: str
+            path to file
+        epoch: int
+            which epoch (session) to load. The rat is sleeping during even numbered epochs
+        '''
+        self.load(path, day=day, epoch=epoch)
+
+    def load(self, path, day, epoch):
+        day_data = pickle.load(open(path, 'rb'))
+        # epoch data dict
+        data_dict = day_data[f'peanut_day{day}_epoch{int(epoch)}']
+        self.data_dict = data_dict
+        self.spike_times = data_dict['spike_times']
+        self.meta = data_dict['identification']
+        self.pos = data_dict['position_df']
+
+    def bin(self, target_region='HPc', spike_threshold=None,
+            bin_width=100, bin_type='time', boxcox=0.5,
+            filter_fn='none', **filter_kwargs):
+        '''
+        spike_threshold: int
+            throw away neurons that spike less than the threshold during the epoch
+        bin_width:     float
+            Bin width for binning spikes. Note the behavior is sampled at 25ms
+        bin_type : str
+            Whether to bin spikes along time or position. Currently only time supported
+        boxcox: float or None
+            Apply boxcox transformation
+        filter_fn: str
+            Check filter_dict
+        filter_kwargs
+            keyword arguments for filter_fn
+        '''
+
+        # unpack data
+        unit_spiking_times = self.collect_unit_spiking_times(
+            target_region=target_region, spike_threshold=spike_threshold)
+
+        # create bins
+        t = self.pos['time'].values
+        bins, bin_width = create_bins(t, bin_width_ms=bin_width, bin_type=bin_type)
+
+        # covnert smoothin bandwidth to indices
+        if filter_fn == 'gaussian':
+            filter_kwargs['sigma'] /= bin_width
+            filter_kwargs['sigma'] = min(1, filter_kwargs['sigma'])
+            print(filter_kwargs['sigma'])
+
+        # get spike rates time series from unit spike times
+        spike_rates = get_spike_rates(unit_spiking_times, bins, t0=t[0],
+                                      filter_fn=filter_fn,
+                                      boxcox=boxcox, **filter_kwargs)
+
+        # Align behavior with the binned spike rates
+        pos_binned = self.get_aligned_behavior(bins)
+
+        # collect and return binned data
+        dat = {}
+        dat['spike_rates'] = spike_rates
+        dat['pos'] = pos_binned
+        # dat['times'] = (bins[1:] + bins[:-1]) / 2  # midpoints
+        dat['times'] = bins[:-1]  # left endpoints
+        return dat
+
+    def collect_unit_spiking_times(self, target_region='HPc', spike_threshold=None):
+        ''' Collect single units located in the target region (e.g. hippocampus)
+        and optionally apply threshold on the total number of spikes.
+        '''
+        unit_spiking_times = collect_unit_spiking_times(
+            self.spike_times, self.meta,
+            target_region=target_region, spike_threshold=spike_threshold)
+        return unit_spiking_times
+
+    def get_aligned_behavior(self, bins):
+        t = self.pos['time'].values
+        pos_linear = self.pos['position_linear'].values
+        pos_binned = align_behavior(t, pos_linear, bins)
+        return pos_binned
