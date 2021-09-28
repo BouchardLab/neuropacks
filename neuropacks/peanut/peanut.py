@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import scipy
 import pickle
 from scipy.interpolate import interp1d
@@ -168,12 +169,41 @@ class Peanut_SingleEpoch():
         else:
             lin_dict = None
 
+        # and also the parsed trajectories
+        traj_basename = f'trajectory_dict_peanut_day{day}.obj'
+        traj_path = os.path.join(dirname, traj_basename)
+        if os.path.isfile(traj_path):
+            trajectory_dict = pickle.load(open(traj_path, 'rb'))
+            traj_dict = trajectory_dict[epoch_key]
+        else:
+            traj_dict = None
+
         # store epoch data as attributes
         self.data_dict = data_dict
         self.spike_times = data_dict['spike_times']
         self.meta = data_dict['identification']
         self.pos = data_dict['position_df']
+
         self.lin_dict = lin_dict
+
+        self.traj_dict = traj_dict
+        self.traj_times_dict = traj_dict['trajectory_start_end_times_in_pos_df']
+        self.traj_times_table = self.all_traj_times()
+
+    def all_traj_times(self):
+        data_list = []
+        for well_pair, start_end_times_list in self.traj_times_dict.items():
+            for start_end_times in start_end_times_list:
+                row = {'start_time': start_end_times[0],
+                       'end_time': start_end_times[1],
+                       'start_well': well_pair[0],
+                       'end_well': well_pair[1]}
+                data_list.append(row)
+
+        column_names = list(row.keys())
+        traj_times_table = pd.DataFrame(data_list).sort_values(by=column_names,
+                                                               ignore_index=True)
+        return traj_times_table
 
     def bin(self, target_region='HPc', spike_threshold=None,
             bin_width=100, bin_type='time', bin_rep='left',
