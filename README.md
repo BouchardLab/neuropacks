@@ -14,3 +14,5 @@ A set of classes to parse various public and private neuroscience datasets.
 ## Private datasets
 
 * peanut - /clusterfs/NSDS_data/external/franklab/peanut_day14/ - Recordings from HPc and PFc from the Frank lab during the execution of a maze task
+* ret2 - Calcium imaging recording from mouse retinal ganglion cells recorded by Mathew Summers in the Feller lab.
+* v1 - Calcium imaging recording from mouse V1 recorded by Yuhan Yang in the Ji lab.
