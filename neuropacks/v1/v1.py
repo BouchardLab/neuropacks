@@ -35,16 +35,32 @@ class V1:
         self.data_path = data_path
         self._read_data()
 
+    @staticmethod
+    def _read_data_single_file(data_path):
+        """Reads in retinal responses from the provided data."""
+        with h5py.File(data_path, 'r') as data:
+            # get angles per trials
+            angles = np.squeeze(data['order'][0][::25])
+            # get responses segmented by stimulus
+            responses_by_stim = data['dff0'][:]
+        responses_by_stim = responses_by_stim.reshape(responses_by_stim.shape[0],
+                                                      -1,
+                                                      25)[..., 5:]
+        return angles, responses_by_stim
+
     def _read_data(self):
         """Reads in retinal responses from the provided data."""
-        with h5py.File(self.data_path, 'r') as data:
-            # get angles per trials
-            self.angles = np.squeeze(data['order'][0][::25])
-            # get responses segmented by stimulus
-            self.responses_by_stim = data['dff0'][:]
-        self.responses_by_stim = self.responses_by_stim.reshape(self.responses_by_stim.shape[0],
-                                                                -1,
-                                                                25)[..., 5:]
+        if isinstance(self.data_path, list):
+            self.angles = []
+            self.responses_by_stim = []
+            for dp in self.data_path:
+                results = V1._read_data_single_file(self.data_path)
+                self.angles.append(results[0])
+                self.responses_by_stim.append(results[1])
+            self.angles = np.concatenate(self.angles)
+            self.responses_by_stim = np.concatenate(self.respons)
+        else:
+            self.angles, self.responses_by_stim = V1._read_data_single_file(self.data_path)
 
         self.unique_angles = np.unique(self.angles)
         # dataset dimensions
