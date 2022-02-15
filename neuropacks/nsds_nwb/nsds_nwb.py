@@ -5,15 +5,33 @@ from pynwb import NWBHDF5IO
 from types import SimpleNamespace
 
 
-class NSDS_NWB():
+class NSDSNWBAudio:
     def __init__(self, nwb_path):
+        """Base class for loading NSDS Lab Auditory datasets stored in the NWB format.
+
+        Parameters
+        ----------
+        nwb_path : str or pathlike
+            Location of NWB file.
+
+        Attributes
+        ----------
+        """
         self.nwb_path = nwb_path
         self.ecog = None
         self.poly = None
         self.stimulus = None
         self._stimulus_envelope = None
-        self.mark = None
-        self.electrodes = None
+        with NWBHDF5IO(self.nwb_path, 'r') as io:
+            nwb = io.read()
+            try:
+                self.intervals = nwb.intervals['trials'].to_dataframe()
+            except Exception:
+                self.intervals = None
+            try:
+                self.electrode_df = nwb.electrodes.to_dataframe()
+            except Exception:
+                self.electrode_df = None
 
     def _load_ecog(self):
         """Load ecog data, if available."""
@@ -49,7 +67,7 @@ class NSDS_NWB():
         elif len(poly) == 0:
             pass
         else:
-            raise ValueError('Multiple ECoG sources found.')
+            raise ValueError('Multiple Poly sources found.')
 
     def _load_stimulus_waveform(self):
         """Load the stimulus waveform."""
@@ -68,3 +86,6 @@ class NSDS_NWB():
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
         return self._stimulus_envelope
+
+    def baseline_data(self):
+        raise NotImplementedError
