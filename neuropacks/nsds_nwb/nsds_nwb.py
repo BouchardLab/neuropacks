@@ -1,8 +1,7 @@
+from types import SimpleNamespace
 import scipy as sp
 
 from pynwb import NWBHDF5IO
-
-from types import SimpleNamespace
 
 
 class NSDSNWBAudio:
@@ -29,7 +28,7 @@ class NSDSNWBAudio:
         electrode_df : dataframe
             Electrode dataframe.
         intervals : dataframe
-            Intervals/trais tables.
+            Intervals/trails tables.
         """
         self.nwb_path = nwb_path
         self.ecog = None
@@ -208,9 +207,6 @@ class NSDSNWBAudio:
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
         return self._stimulus_envelope
-
-    def baseline_data(self):
-        raise NotImplementedError
 
 
 def slice_interval(start_time, stop_time, rate, t_offset=0):
