@@ -16,6 +16,20 @@ class NSDSNWBAudio:
 
         Attributes
         ----------
+        nwb_path : str or pathlike
+            Location of NWB file.
+        ecog : NameSpace
+            Namespace for ECoG data, if present.
+        poly : NameSpace
+            Namespace for Poly data, if present.
+        stimulus : NameSpace
+            Namespace for the stimulus.
+        stimulus_envelope : ndarray
+            Envelope of the stimulus waveform.
+        electrode_df : dataframe
+            Electrode dataframe.
+        intervals : dataframe
+            Intervals/trais tables.
         """
         self.nwb_path = nwb_path
         self.ecog = None
@@ -44,8 +58,11 @@ class NSDSNWBAudio:
                     ecog.append(di[n].data[:])
                     ecog_rate = di[n].rate
         if len(ecog) == 1:
+            idxs = self.electrode_df['group_name'] == 'ECoG'
+            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             self.ecog = SimpleNamespace(data=ecog[0],
-                                        rate=ecog_rate)
+                                        rate=ecog_rate,
+                                        good_electrodes=good_electrodes)
         elif len(ecog) == 0:
             pass
         else:
@@ -62,8 +79,11 @@ class NSDSNWBAudio:
                     poly.append(di[n].data[:])
                     poly_rate = di[n].rate
         if len(poly) == 1:
+            idxs = self.electrode_df['group_name'] == 'Poly'
+            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             self.poly = SimpleNamespace(data=poly[0],
-                                        rate=poly_rate)
+                                        rate=poly_rate,
+                                        good_electrodes=good_electrodes)
         elif len(poly) == 0:
             pass
         else:
@@ -80,8 +100,8 @@ class NSDSNWBAudio:
     def stimulus_envelope(self):
         "The stimulus envelope computed through the Hilbert Transform."
         if self._stimulus_envelope is None:
-            fftd = sp.fft.fft(self.stimulus.astype('float32'))
-            freq = sp.fft.fftfreq(self.stimulus.size)
+            fftd = sp.fft.fft(self.stimulus.data.astype('float32'))
+            freq = sp.fft.fftfreq(self.stimulus.data.size)
             fftd[freq <= 0] = 0
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
