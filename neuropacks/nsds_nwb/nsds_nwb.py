@@ -85,12 +85,18 @@ class NSDSNWBAudio:
                         data = None
                     data_holder.append(data)
                     rate = di[n].rate
+                    n_timepoints, n_channels, n_bands = di[n].data.shape
+                    starting_time = di[n].starting_time
 
         if len(data_holder) == 1:
             idxs = self.electrode_df['group_name'] == data_source
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             return SimpleNamespace(data=data_holder[0],
                                    rate=rate,
+                                   n_timepoints=n_timepoints,
+                                   n_channels=n_channels,
+                                   n_bands=n_bands,
+                                   starting_time=starting_time,
                                    good_electrodes=good_electrodes)
         elif len(data_holder) == 0:
             return None
@@ -98,11 +104,31 @@ class NSDSNWBAudio:
             raise ValueError(f'Multiple {data_source} sources found.')
 
     def _load_stimulus_waveform(self):
-        """Load the stimulus waveform."""
+        """Load the stimulus waveform.
+
+        Attributes:
+        -----------
+        data: shape (n_samples,)
+        rate: Raw audio rate (Hz)
+        n_timepoints: Total number of samples in the raw audio file
+        starting_time: (time in seconds)
+            Lag between the start of neural recording and the start of audio file.
+            If starting_time is 10., it means the wav file was started 10 seconds
+            *after* the neural recording started. So in the reference frame of the
+            session time (which always starts with the start of neural recordings),
+            the real time of the stimulus should be calculated as
+                time_in_session = starting_time + i_sample / rate.
+            where i_sample is the index of the waveform data here.
+        """
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
-            self.stimulus = SimpleNamespace(data=nwb.stimulus['stim_waveform'].data[:],
-                                            rate=nwb.stimulus['stim_waveform'].rate)
+            stim_waveform = nwb.stimulus['stim_waveform']
+            n_timepoints = stim_waveform.data.shape[0]
+            starting_time = stim_waveform.starting_time
+            self.stimulus = SimpleNamespace(data=stim_waveform.data[:],
+                                            rate=stim_waveform.rate,
+                                            n_timepoints=n_timepoints,
+                                            starting_time=starting_time)
 
     @property
     def stimulus_envelope(self):
