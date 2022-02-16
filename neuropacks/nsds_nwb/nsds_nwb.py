@@ -47,47 +47,55 @@ class NSDSNWBAudio:
             except Exception:
                 self.electrode_df = None
 
-    def _load_ecog(self):
-        """Load ecog data, if available."""
-        ecog = []
-        with NWBHDF5IO(self.nwb_path, 'r') as io:
-            nwb = io.read()
-            di = nwb.processing['preprocessing'].data_interfaces
-            for n in di.keys():
-                if 'ecog' in n.lower():
-                    ecog.append(di[n].data[:])
-                    ecog_rate = di[n].rate
-        if len(ecog) == 1:
-            idxs = self.electrode_df['group_name'] == 'ECoG'
-            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
-            self.ecog = SimpleNamespace(data=ecog[0],
-                                        rate=ecog_rate,
-                                        good_electrodes=good_electrodes)
-        elif len(ecog) == 0:
-            pass
-        else:
-            raise ValueError('Multiple ECoG sources found.')
+    def _load_ecog(self, load_data=True):
+        """Load ecog data, if available.
 
-    def _load_poly(self):
-        """Load polytrode data, if available."""
-        poly = []
+        CAVEAT: When load_data is True, this loads the full recording into memory.
+        """
+        self.ecog = self.__load_processed_neural_data('ECoG', load_data=load_data)
+
+    def _load_poly(self, load_data=True):
+        """Load polytrode data, if available.
+
+        CAVEAT: When load_data is True, this loads the full recording into memory.
+        """
+        self.poly = self.__load_processed_neural_data('Poly', load_data=load_data)
+
+    def __load_processed_neural_data(self, data_source, load_data=False):
+        '''
+        Inputs:
+        -------
+        data_source (str):  either 'ECoG' or 'Poly'
+        load_data (bool):   if True, load and store full data;
+                            if False, use a placeholder data=None.
+
+        Returns:
+        --------
+        A SimpleNamespace object.
+        '''
+        data_holder = []
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
             di = nwb.processing['preprocessing'].data_interfaces
             for n in di.keys():
-                if 'poly' in n.lower():
-                    poly.append(di[n].data[:])
-                    poly_rate = di[n].rate
-        if len(poly) == 1:
-            idxs = self.electrode_df['group_name'] == 'Poly'
+                if data_source.lower() in n.lower():
+                    if load_data:
+                        data = di[n].data[:]
+                    else:
+                        data = None
+                    data_holder.append(data)
+                    rate = di[n].rate
+
+        if len(data_holder) == 1:
+            idxs = self.electrode_df['group_name'] == data_source
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
-            self.poly = SimpleNamespace(data=poly[0],
-                                        rate=poly_rate,
-                                        good_electrodes=good_electrodes)
-        elif len(poly) == 0:
-            pass
+            return SimpleNamespace(data=data_holder[0],
+                                   rate=rate,
+                                   good_electrodes=good_electrodes)
+        elif len(data_holder) == 0:
+            return None
         else:
-            raise ValueError('Multiple Poly sources found.')
+            raise ValueError(f'Multiple {data_source} sources found.')
 
     def _load_stimulus_waveform(self):
         """Load the stimulus waveform."""
