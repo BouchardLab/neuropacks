@@ -4,7 +4,8 @@ import sklearn.preprocessing as skpre
 
 from pynwb import NWBHDF5IO
 
-from neuropacks.nsds_nwb.nsds_nwb import NSDSNWBAudio, normalize_neural
+from neuropacks.nsds_nwb.nsds_nwb import NSDSNWBAudio
+from neuropacks.nsds_nwb.utils import normalize_neural
 
 
 class Tone(NSDSNWBAudio):
