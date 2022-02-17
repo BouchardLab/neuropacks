@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import numpy as np
 import scipy as sp
 
 from pynwb import NWBHDF5IO
@@ -223,6 +224,39 @@ class NSDSNWBAudio:
                                    rate=rate,
                                    n_timepoints=n_timepoints,
                                    starting_time=starting_time)
+
+    def _get_trialized_stim(self, type='waveform'):
+        if self.stimulus is None:
+            self.stimulus = self._get_stimulus_waveform()
+
+        if 'wav' in type:
+            stim_ = self.stimulus
+        elif 'env' in type:
+            stim_ = SimpleNamespace(name='stimulus_envelope',
+                                    data=self.stimulus_envelope,
+                                    rate=self.stimulus.rate,
+                                    n_timepoints=self.stimulus_envelope.shape[0],
+                                    starting_time=self.stimulus.starting_time)
+        else:
+            raise ValueError('unknown data type')
+
+        stim_wav_list = []
+        for ii, row in self.intervals.iterrows():
+            if row['sb'] != 's':
+                continue
+
+            idx = slice_interval(row['start_time'], row['stop_time'],
+                                 rate=stim_.rate,
+                                 t_offset=stim_.starting_time)
+
+            stim_sliced = SimpleNamespace(name=f'stim_trial{ii}',
+                                          data=stim_.data[idx],
+                                          rate=stim_.rate,
+                                          n_timepoints=np.sum(idx),
+                                          starting_time=stim_.starting_time)
+            stim_wav_list.append(stim_sliced)
+        # list of namespace objects
+        return stim_wav_list
 
     @property
     def stimulus_envelope(self):
