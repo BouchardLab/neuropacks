@@ -6,8 +6,6 @@ import pickle
 from scipy.interpolate import interp1d
 from scipy.ndimage import convolve1d, gaussian_filter1d
 
-from neuropacks.peanut.data_manager import EpochDataManager
-
 
 filter_dict = {'none': lambda x, **kwargs: x, 'gaussian': gaussian_filter1d}
 
@@ -141,15 +139,3 @@ def load_peanut(fpath, epoch, spike_threshold, bin_width=100, bin_type='time', b
     dat['pos'] = pos_linear
 
     return dat
-
-
-class Peanut_SingleEpoch(EpochDataManager):
-    def __init__(self, path, epoch, day=14):
-        '''
-        path: str
-            path to file
-        epoch: int
-            which epoch (session) to load.
-            For day14, the rat is running during even numbered epochs.
-        '''
-        super().__init__(path, animal='peanut', day=day, epoch=epoch, verbose=1)
