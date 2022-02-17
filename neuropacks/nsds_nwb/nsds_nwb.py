@@ -5,6 +5,9 @@ from pynwb import NWBHDF5IO
 
 from neuropacks.nsds_nwb.utils import slice_interval
 
+NEURAL_DATA_SOURCES = {'ecog': 'ECoG',
+                       'poly': 'Poly'}
+
 
 class NSDSNWBAudio:
     def __init__(self, nwb_path):
@@ -51,20 +54,20 @@ class NSDSNWBAudio:
     def _load_ecog(self, load_data=True):
         """Load ecog data, if available.
         """
-        self.ecog = self._get_processed_neural_data('ECoG', load_data=load_data)
+        self.ecog = self._get_processed_neural_data('ecog', load_data=load_data)
 
     def _load_poly(self, load_data=True, start_time=None, stop_time=None):
         """Load polytrode data, if available.
         """
-        self.poly = self._get_processed_neural_data('Poly', load_data=load_data)
+        self.poly = self._get_processed_neural_data('poly', load_data=load_data)
 
     def get_ecog_interval(self, start_time=None, stop_time=None):
-        return self._get_processed_neural_data('ECoG', load_data=True,
+        return self._get_processed_neural_data('ecog', load_data=True,
                                                start_time=start_time,
                                                stop_time=stop_time)
 
     def get_poly_interval(self, start_time=None, stop_time=None):
-        return self._get_processed_neural_data('Poly', load_data=True,
+        return self._get_processed_neural_data('poly', load_data=True,
                                                start_time=start_time,
                                                stop_time=stop_time)
 
@@ -79,7 +82,7 @@ class NSDSNWBAudio:
         Parameters
         ----------
         data_source : str
-            Either 'ECoG' or 'Poly'.
+            Either 'ecog' or 'poly'.
         load_data : bool
             If True, load and store full data;
             if False, use a placeholder data=None.
@@ -97,7 +100,7 @@ class NSDSNWBAudio:
             nwb = io.read()
             di = nwb.processing['preprocessing'].data_interfaces
             for n in di.keys():
-                if data_source.lower() in n.lower():
+                if data_source in n.lower():
                     rate = di[n].rate
                     starting_time = di[n].starting_time
                     if load_data:
@@ -112,12 +115,13 @@ class NSDSNWBAudio:
                         n_timepoints, n_channels, n_bands = di[n].data.shape
                     data_holder.append(data)
 
-        name = data_source.lower()
+        name = data_source
         if start_time is not None or stop_time is not None:
             name = f'{name}_subset'
 
+        data_source_cased = NEURAL_DATA_SOURCES[data_source]
         if len(data_holder) == 1:
-            idxs = self.electrode_df['group_name'] == data_source
+            idxs = self.electrode_df['group_name'] == data_source_cased
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             return SimpleNamespace(name=name,
                                    data=data_holder[0],
@@ -130,7 +134,7 @@ class NSDSNWBAudio:
         elif len(data_holder) == 0:
             return None
         else:
-            raise ValueError(f'Multiple {data_source} sources found.')
+            raise ValueError(f'Multiple {data_source_cased} sources found.')
 
     def _load_stimulus_waveform(self, start_time=None, stop_time=None):
         """Load the stimulus waveform.
