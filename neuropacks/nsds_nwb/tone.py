@@ -69,6 +69,18 @@ class Tone(NSDSNWBAudio):
         """
         if neural_data not in ['ecog', 'poly']:
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
+
+        response, baseline = self._get_trialized_responses(
+            neural_data, in_memory=in_memory)
+
+        baseline = np.concatenate(baseline, axis=0)
+        response = np.stack(response)
+        response, mean, std = normalize_neural(response, baseline)
+        return np.transpose(response.mean(axis=-1), (0, 2, 1))
+
+    def _get_trialized_responses(self, neural_data, in_memory=True):
+        ''' overrides NSDSNWBAudio method; essentially the same. should confirm
+        '''
         data = []
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
@@ -98,8 +110,4 @@ class Tone(NSDSNWBAudio):
                     baseline.append(data[starti:stopi][:, good_electrodes])
                 if row['sb'] == 's':
                     response.append(data[starti:stopi][:, good_electrodes])
-
-        baseline = np.concatenate(baseline, axis=0)
-        response = np.stack(response)
-        response, mean, std = normalize_neural(response, baseline)
-        return np.transpose(response.mean(axis=-1), (0, 2, 1))
+        return response, baseline
