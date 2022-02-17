@@ -51,25 +51,25 @@ class NSDSNWBAudio:
     def _load_ecog(self, load_data=True):
         """Load ecog data, if available.
         """
-        self.ecog = self.__get_processed_neural_data('ECoG', load_data=load_data)
+        self.ecog = self._get_processed_neural_data('ECoG', load_data=load_data)
 
     def _load_poly(self, load_data=True, start_time=None, stop_time=None):
         """Load polytrode data, if available.
         """
-        self.poly = self.__get_processed_neural_data('Poly', load_data=load_data)
+        self.poly = self._get_processed_neural_data('Poly', load_data=load_data)
 
     def get_ecog_interval(self, start_time=None, stop_time=None):
-        return self.__get_processed_neural_data('ECoG', load_data=True,
-                                                 start_time=start_time,
-                                                 stop_time=stop_time)
+        return self._get_processed_neural_data('ECoG', load_data=True,
+                                               start_time=start_time,
+                                               stop_time=stop_time)
 
     def get_poly_interval(self, start_time=None, stop_time=None):
-        return self.__get_processed_neural_data('Poly', load_data=True,
-                                                 start_time=start_time,
-                                                 stop_time=stop_time)
+        return self._get_processed_neural_data('Poly', load_data=True,
+                                               start_time=start_time,
+                                               stop_time=stop_time)
 
-    def __get_processed_neural_data(self, data_source,
-                                    load_data=True, start_time=None, stop_time=None):
+    def _get_processed_neural_data(self, data_source,
+                                   load_data=True, start_time=None, stop_time=None):
         '''Load and return processed ECoG or Polytrode data, if available.
 
         CAVEAT:
@@ -135,7 +135,7 @@ class NSDSNWBAudio:
     def _load_stimulus_waveform(self, start_time=None, stop_time=None):
         """Load the stimulus waveform.
         """
-        self.stimulus = self.__get_stimulus_waveform()
+        self.stimulus = self._get_stimulus_waveform()
 
     def get_stimulus_interval(self, start_time=None, stop_time=None):
         '''
@@ -146,9 +146,9 @@ class NSDSNWBAudio:
         stop_time : float
             Stop time for loading data from an interval.
         '''
-        return self.__get_stimulus_waveform(start_time=start_time, stop_time=stop_time)
+        return self._get_stimulus_waveform(start_time=start_time, stop_time=stop_time)
 
-    def __get_stimulus_waveform(self, start_time=None, stop_time=None):
+    def _get_stimulus_waveform(self, start_time=None, stop_time=None):
         """Load and return the stimulus waveform.
 
         Parameters
