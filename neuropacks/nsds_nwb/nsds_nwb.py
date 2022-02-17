@@ -1,8 +1,7 @@
+from types import SimpleNamespace
 import scipy as sp
 
 from pynwb import NWBHDF5IO
-
-from types import SimpleNamespace
 
 
 class NSDSNWBAudio:
@@ -29,7 +28,7 @@ class NSDSNWBAudio:
         electrode_df : dataframe
             Electrode dataframe.
         intervals : dataframe
-            Intervals/trais tables.
+            Intervals/trails tables.
         """
         self.nwb_path = nwb_path
         self.ecog = None
@@ -56,13 +55,15 @@ class NSDSNWBAudio:
             for n in di.keys():
                 if 'ecog' in n.lower():
                     ecog.append(di[n].data[:])
-                    ecog_rate = di[n].rate
+                    rate = di[n].rate
+                    starting_time = di[n].starting_time
         if len(ecog) == 1:
             idxs = self.electrode_df['group_name'] == 'ECoG'
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             self.ecog = SimpleNamespace(data=ecog[0],
-                                        rate=ecog_rate,
-                                        good_electrodes=good_electrodes)
+                                        rate=rate,
+                                        good_electrodes=good_electrodes,
+                                        starting_time=starting_time)
         elif len(ecog) == 0:
             pass
         else:
@@ -77,13 +78,15 @@ class NSDSNWBAudio:
             for n in di.keys():
                 if 'poly' in n.lower():
                     poly.append(di[n].data[:])
-                    poly_rate = di[n].rate
+                    rate = di[n].rate
+                    starting_time = di[n].starting_time
         if len(poly) == 1:
             idxs = self.electrode_df['group_name'] == 'Poly'
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             self.poly = SimpleNamespace(data=poly[0],
-                                        rate=poly_rate,
-                                        good_electrodes=good_electrodes)
+                                        rate=rate,
+                                        good_electrodes=good_electrodes,
+                                        starting_time=starting_time)
         elif len(poly) == 0:
             pass
         else:
@@ -93,8 +96,10 @@ class NSDSNWBAudio:
         """Load the stimulus waveform."""
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
-            self.stimulus = SimpleNamespace(data=nwb.stimulus['stim_waveform'].data[:],
-                                            rate=nwb.stimulus['stim_waveform'].rate)
+            stim = nwb.stimulus['stim_waveform']
+            self.stimulus = SimpleNamespace(data=stim.data[:],
+                                            rate=stim.rate,
+                                            starting_time=stim.starting_time)
 
     @property
     def stimulus_envelope(self):
@@ -106,6 +111,3 @@ class NSDSNWBAudio:
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
         return self._stimulus_envelope
-
-    def baseline_data(self):
-        raise NotImplementedError
