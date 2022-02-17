@@ -54,15 +54,21 @@ def get_spike_rates(unit_spiking_times, bins,
                     boxcox=0.5, log=None,
                     filter_fn='none', **filter_kwargs):
     if filter_fn == 'none':
+
+        def do_nothing(x, **kwargs):
+            ''' do nothing and just return the input argument '''
+            return x
+
         _filter = do_nothing
+
     elif filter_fn == 'gaussian':
         _filter = gaussian_filter1d
-        if filter_kwargs['sigma'] >= 10:
-            # guessing that this is in ms; convert to seconds
-            filter_kwargs['sigma'] /= 1000
         bin_width = bins[1] - bins[0]
         filter_kwargs['sigma'] /= bin_width  # convert to unit of bins
-        # filter_kwargs['sigma'] = min(1, filter_kwargs['sigma'])
+        # filter_kwargs['sigma'] = min(1, filter_kwargs['sigma']) # -- ??
+
+    else:
+        raise ValueError(f'unknown filter_fn: got {filter_fn}')
 
     all_rates_list = []
     for spike_times in unit_spiking_times:
@@ -82,11 +88,6 @@ def get_spike_rates(unit_spiking_times, bins,
 def box_cox(x, power_param):
     ''' one-parameter Box-Cox transformation '''
     return (np.power(x, power_param) - 1) / power_param
-
-
-def do_nothing(x, **kwargs):
-    ''' do nothing and just return the input argument '''
-    return x
 
 
 def downsample_by_interp(x, t, t_samp):

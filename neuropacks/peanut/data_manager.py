@@ -494,10 +494,14 @@ def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
     filter_kwargs
         keyword arguments for filter_fn
     '''
-    # create bins
+    # (ad hoc) check if time variables are in ms; if so, convert to seconds
     if bin_width >= 10:
         # guessing that this is in ms; convert to s
         bin_width /= 1000
+    if 'sigma' in filter_kwargs:
+        if filter_kwargs['sigma'] >= 10:
+            # guessing that this is in ms; convert to seconds
+            filter_kwargs['sigma'] /= 1000
 
     # get spike rates time series from unit spike times, by binning in time
     t_binned, spike_rates = spike_times_to_rates(
