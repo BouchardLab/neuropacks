@@ -100,6 +100,8 @@ class NSDSNWBAudio:
             nwb = io.read()
             di = nwb.processing['preprocessing'].data_interfaces
             for n in di.keys():
+                if not n.startswith('wvlt_'):
+                    continue
                 if data_source in n.lower():
                     rate = di[n].rate
                     starting_time = di[n].starting_time
