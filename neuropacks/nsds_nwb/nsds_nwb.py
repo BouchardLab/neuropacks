@@ -138,6 +138,30 @@ class NSDSNWBAudio:
         else:
             raise ValueError(f'Multiple {data_source_cased} sources found.')
 
+    def _get_trialized_responses(self, neural_data, in_memory=True):
+        data_ns = self._get_processed_neural_data(neural_data, load_data=in_memory)
+        good_electrodes = data_ns.good_electrodes
+
+        responses_list = []
+        baselines_list = []
+        for ii, row in self.intervals.iterrows():
+            if in_memory:
+                idx = slice_interval(row['start_time'], row['stop_time'],
+                                     rate=data_ns.rate,
+                                     t_offset=data_ns.starting_time)
+                data_sliced = data_ns.data[idx]
+            else:
+                data_sliced = self._get_processed_neural_data(
+                    neural_data,
+                    start_time=row['start_time'],
+                    stop_time=row['stop_time']).data
+
+            if row['sb'] == 's':
+                responses_list.append(data_sliced[:, good_electrodes])
+            if row['sb'] == 'b':
+                baselines_list.append(data_sliced[:, good_electrodes])
+        return responses_list, baselines_list
+
     def get_stimulus_interval(self, start_time=None, stop_time=None):
         '''
         Parameters
