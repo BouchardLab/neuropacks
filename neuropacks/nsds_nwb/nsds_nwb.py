@@ -3,6 +3,11 @@ import scipy as sp
 
 from pynwb import NWBHDF5IO
 
+from neuropacks.nsds_nwb.utils import slice_interval
+
+NEURAL_DATA_SOURCES = {'ecog': 'ECoG',
+                       'poly': 'Poly'}
+
 
 class NSDSNWBAudio:
     def __init__(self, nwb_path):
@@ -46,60 +51,154 @@ class NSDSNWBAudio:
             except Exception:
                 self.electrode_df = None
 
-    def _load_ecog(self):
-        """Load ecog data, if available."""
-        ecog = []
+    def _load_ecog(self, load_data=True):
+        """Load ecog data, if available.
+        """
+        self.ecog = self._get_processed_neural_data('ecog', load_data=load_data)
+
+    def _load_poly(self, load_data=True, start_time=None, stop_time=None):
+        """Load polytrode data, if available.
+        """
+        self.poly = self._get_processed_neural_data('poly', load_data=load_data)
+
+    def get_ecog_interval(self, start_time=None, stop_time=None):
+        return self._get_processed_neural_data('ecog', load_data=True,
+                                               start_time=start_time,
+                                               stop_time=stop_time)
+
+    def get_poly_interval(self, start_time=None, stop_time=None):
+        return self._get_processed_neural_data('poly', load_data=True,
+                                               start_time=start_time,
+                                               stop_time=stop_time)
+
+    def _get_processed_neural_data(self, data_source,
+                                   load_data=True, start_time=None, stop_time=None):
+        '''Load and return processed ECoG or Polytrode data, if available.
+
+        CAVEAT:
+        With default settings (load_data=True, start_time=None, stop_time=None),
+        this loads the full recording into memory.
+
+        Parameters
+        ----------
+        data_source : str
+            Either 'ecog' or 'poly'.
+        load_data : bool
+            If True, load and store full data;
+            if False, use a placeholder data=None.
+        start_time : float
+            Start time for loading data from an interval.
+        stop_time : float
+            Stop time for loading data from an interval.
+
+        Returns
+        -------
+        A SimpleNamespace object.
+        '''
+        data_holder = []
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
             di = nwb.processing['preprocessing'].data_interfaces
             for n in di.keys():
-                if 'ecog' in n.lower():
-                    ecog.append(di[n].data[:])
+                if not n.startswith('wvlt_'):
+                    continue
+                if data_source in n.lower():
                     rate = di[n].rate
                     starting_time = di[n].starting_time
-        if len(ecog) == 1:
-            idxs = self.electrode_df['group_name'] == 'ECoG'
-            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
-            self.ecog = SimpleNamespace(data=ecog[0],
-                                        rate=rate,
-                                        good_electrodes=good_electrodes,
-                                        starting_time=starting_time)
-        elif len(ecog) == 0:
-            pass
-        else:
-            raise ValueError('Multiple ECoG sources found.')
+                    if load_data:
+                        data_idx = slice_interval(start_time, stop_time,
+                                                  rate, t_offset=starting_time)
+                        data = di[n].data[data_idx]  # first axis is for the timepoints
+                        n_timepoints, n_channels, n_bands = data.shape
+                        if start_time is not None:
+                            starting_time = start_time
+                    else:
+                        data = None
+                        n_timepoints, n_channels, n_bands = di[n].data.shape
+                    data_holder.append(data)
 
-    def _load_poly(self):
-        """Load polytrode data, if available."""
-        poly = []
+        name = data_source
+        if start_time is not None or stop_time is not None:
+            name = f'{name}_subset'
+
+        data_source_cased = NEURAL_DATA_SOURCES[data_source]
+        if len(data_holder) == 1:
+            idxs = self.electrode_df['group_name'] == data_source_cased
+            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
+            return SimpleNamespace(name=name,
+                                   data=data_holder[0],
+                                   rate=rate,
+                                   n_timepoints=n_timepoints,
+                                   n_channels=n_channels,
+                                   n_bands=n_bands,
+                                   starting_time=starting_time,
+                                   good_electrodes=good_electrodes)
+        elif len(data_holder) == 0:
+            return None
+        else:
+            raise ValueError(f'Multiple {data_source_cased} sources found.')
+
+    def get_stimulus_interval(self, start_time=None, stop_time=None):
+        '''
+        Parameters
+        ----------
+        start_time : float
+            Start time for loading data from an interval.
+        stop_time : float
+            Stop time for loading data from an interval.
+        '''
+        return self._get_stimulus_waveform(start_time=start_time, stop_time=stop_time)
+
+    def _get_stimulus_waveform(self, start_time=None, stop_time=None):
+        """Load and return the stimulus waveform.
+
+        Parameters
+        ----------
+        start_time : float
+            Start time for loading data from an interval.
+        stop_time : float
+            Stop time for loading data from an interval.
+
+        Attributes
+        ----------
+        data : ndarray
+            With shape (n_samples,)
+        rate : float
+            Raw audio rate (Hz)
+        n_timepoints : int
+            Total number of samples in the raw audio file
+        starting_time : float
+            Lag, in seconds, between the start of neural recording and the start
+            of the stimulus audio file. If starting_time is 10., it means the
+            wav file was started 10 seconds *after* the neural recording started.
+            So in the reference frame of the session time (which always starts
+            with the start of neural recordings), the real time of the stimulus
+            should be calculated as
+                time_in_session = starting_time + i_sample / rate
+            where i_sample is the index of the waveform data here.
+        """
+        name = 'stimulus'
+        if start_time is not None or stop_time is not None:
+            name = f'{name}_subset'
+
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
-            di = nwb.processing['preprocessing'].data_interfaces
-            for n in di.keys():
-                if 'poly' in n.lower():
-                    poly.append(di[n].data[:])
-                    rate = di[n].rate
-                    starting_time = di[n].starting_time
-        if len(poly) == 1:
-            idxs = self.electrode_df['group_name'] == 'Poly'
-            good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
-            self.poly = SimpleNamespace(data=poly[0],
-                                        rate=rate,
-                                        good_electrodes=good_electrodes,
-                                        starting_time=starting_time)
-        elif len(poly) == 0:
-            pass
-        else:
-            raise ValueError('Multiple Poly sources found.')
+            stim_waveform = nwb.stimulus['stim_waveform']
 
-    def _load_stimulus_waveform(self):
-        """Load the stimulus waveform."""
-        with NWBHDF5IO(self.nwb_path, 'r') as io:
-            nwb = io.read()
-            stim = nwb.stimulus['stim_waveform']
-            self.stimulus = SimpleNamespace(data=stim.data[:],
-                                            rate=stim.rate,
-                                            starting_time=stim.starting_time)
+            rate = stim_waveform.rate
+            starting_time = stim_waveform.starting_time
+            data_idx = slice_interval(start_time, stop_time,
+                                      rate, t_offset=starting_time)
+            data = stim_waveform.data[data_idx]
+            n_timepoints = data.shape[0]
+            if start_time is not None:
+                starting_time = start_time
+
+            return SimpleNamespace(name=name,
+                                   data=data,
+                                   rate=rate,
+                                   n_timepoints=n_timepoints,
+                                   starting_time=starting_time)
 
     @property
     def stimulus_envelope(self):
