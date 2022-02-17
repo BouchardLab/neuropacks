@@ -138,11 +138,6 @@ class NSDSNWBAudio:
         else:
             raise ValueError(f'Multiple {data_source_cased} sources found.')
 
-    def _load_stimulus_waveform(self, start_time=None, stop_time=None):
-        """Load the stimulus waveform.
-        """
-        self.stimulus = self._get_stimulus_waveform()
-
     def get_stimulus_interval(self, start_time=None, stop_time=None):
         '''
         Parameters
