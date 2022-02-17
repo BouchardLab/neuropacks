@@ -4,15 +4,14 @@ from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
 
-def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
-                               bin_width=200, bin_rep='left',
-                               boxcox=0.5, filter_fn='none', **filter_kwargs):
+def spike_times_to_rates(unit_spiking_times, bins=None,
+                         t_start=None, t_end=None,
+                         bin_width=None, bin_type='time', bin_rep='left',
+                         boxcox=0.5, filter_fn='none', **filter_kwargs):
     '''
-    spike_threshold: int
-        throw away neurons that spike less than the threshold during the epoch
-        default value is 0 (keep all units, including those with 0 spikes)
-    bin_width:     float
-        Bin width for binning spikes. Note the behavior is sampled at 25ms
+    bin_width : float
+        Bin width for binning spikes.
+        Should be in the same unit as unit_spiking_times (in most cases seconds).
     bin_type : str
         Whether to bin spikes along time or position. Currently only time supported
     boxcox: float or None
@@ -22,13 +21,9 @@ def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
     filter_kwargs
         keyword arguments for filter_fn
     '''
-    # create bins
-    if bin_width >= 10:
-        # guessing that this is in ms; convert to s
-        bin_width /= 1000
-
-    bins = create_bins(t_start=t[0], t_end=t[-1], bin_width=bin_width,
-                       bin_type='time')
+    if bins is None:
+        bins = create_bins(t_start=t_start, t_end=t_end, bin_width=bin_width,
+                           bin_type='time')
 
     if bin_rep == 'center':
         t_binned = bins[:-1] + bin_width / 2  # midpoints
@@ -43,31 +38,16 @@ def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
     spike_rates = get_spike_rates(unit_spiking_times, bins,
                                   filter_fn=filter_fn,
                                   boxcox=boxcox, **filter_kwargs)
-
-    if pos_linear is not None:
-        # downsample behavior to align with the binned spike rates
-        pos_binned = downsample_by_interp(pos_linear, t, t_binned)
-    else:
-        pos_binned = None
-
-    return t_binned, spike_rates, pos_binned
+    return t_binned, spike_rates
 
 
 def create_bins(t_start, t_end, bin_width, bin_type='time'):
     T = t_end - t_start
     if bin_type == 'time':
         bins = np.linspace(t_start, t_end, int(T // bin_width))
-    elif bin_type == 'theta':
-        raise NotImplementedError
     else:
         raise ValueError('unknown bin_type')
     return bins
-
-
-def downsample_by_interp(x, t, t_samp):
-    interpolator = interp1d(t, x)
-    x_samp = interpolator(t_samp)
-    return x_samp
 
 
 def get_spike_rates(unit_spiking_times, bins,
@@ -107,3 +87,9 @@ def box_cox(x, power_param):
 def do_nothing(x, **kwargs):
     ''' do nothing and just return the input argument '''
     return x
+
+
+def downsample_by_interp(x, t, t_samp):
+    interpolator = interp1d(t, x)
+    x_samp = interpolator(t_samp)
+    return x_samp

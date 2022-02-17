@@ -4,9 +4,9 @@ import pandas as pd
 import pickle
 from copy import deepcopy
 
-from .binning import get_binned_times_rates_pos
 from .task import get_traj_outcomes
-# from forkmaze_analysis.utils import load_pickle
+
+from neuropacks.utils.binning import spike_times_to_rates, downsample_by_interp
 
 
 class DayDataManager():
@@ -477,3 +477,38 @@ class Peanut_SingleEpoch(EpochDataManager):
 
 def load_pickle(filename):
     return pickle.load(open(filename, 'rb'))
+
+
+def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
+                               bin_width=200, bin_rep='left',
+                               boxcox=0.5, filter_fn='none', **filter_kwargs):
+    '''
+    bin_width : float
+        Bin width for binning spikes. Note the behavior is sampled at 25ms
+    bin_type : str
+        Whether to bin spikes along time or position. Currently only time supported
+    boxcox: float or None
+        Apply boxcox transformation
+    filter_fn: str
+        Check filter_dict
+    filter_kwargs
+        keyword arguments for filter_fn
+    '''
+    # create bins
+    if bin_width >= 10:
+        # guessing that this is in ms; convert to s
+        bin_width /= 1000
+
+    # get spike rates time series from unit spike times, by binning in time
+    t_binned, spike_rates = spike_times_to_rates(
+        unit_spiking_times, t_start=t[0], t_end=t[-1],
+        bin_width=bin_width, bin_type=bin_type, bin_rep=bin_rep,
+        boxcox=boxcox, filter_fn=filter_fn, **filter_kwargs)
+
+    if pos_linear is not None:
+        # downsample behavior to align with the binned spike rates
+        pos_binned = downsample_by_interp(pos_linear, t, t_binned)
+    else:
+        pos_binned = None
+
+    return t_binned, spike_rates, pos_binned
