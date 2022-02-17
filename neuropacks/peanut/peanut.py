@@ -6,6 +6,9 @@ import pickle
 from scipy.interpolate import interp1d
 from scipy.ndimage import convolve1d, gaussian_filter1d
 
+from neuropacks.peanut.data_manager import EpochDataManager
+
+
 filter_dict = {'none': lambda x, **kwargs: x, 'gaussian': gaussian_filter1d}
 
 
@@ -140,7 +143,7 @@ def load_peanut(fpath, epoch, spike_threshold, bin_width=100, bin_type='time', b
     return dat
 
 
-class Peanut_SingleEpoch():
+class Peanut_SingleEpoch(EpochDataManager):
     def __init__(self, path, epoch, day=14):
         '''
         path: str
@@ -149,131 +152,4 @@ class Peanut_SingleEpoch():
             which epoch (session) to load.
             For day14, the rat is running during even numbered epochs.
         '''
-        self.load(path, day=day, epoch=epoch)
-
-    def load(self, path, day, epoch):
-        epoch_key = f'peanut_day{day}_epoch{int(epoch)}'
-
-        # load the preprocessed data from the day, and take specified epoch
-        day_data = pickle.load(open(path, 'rb'))
-        data_dict = day_data[epoch_key]
-
-        # also load information for getting linearized position,
-        # if available in the same folder
-        dirname, _ = os.path.split(path)
-        lin_basename = f'linearization_dict_peanut_day{day}.obj'
-        lin_path = os.path.join(dirname, lin_basename)
-        if os.path.isfile(lin_path):
-            linearization_dict = pickle.load(open(lin_path, 'rb'))
-            lin_dict = linearization_dict[epoch_key]
-        else:
-            lin_dict = None
-
-        # and also the parsed trajectories
-        traj_basename = f'trajectory_dict_peanut_day{day}.obj'
-        traj_path = os.path.join(dirname, traj_basename)
-        if os.path.isfile(traj_path):
-            trajectory_dict = pickle.load(open(traj_path, 'rb'))
-            traj_dict = trajectory_dict[epoch_key]
-        else:
-            traj_dict = None
-
-        # store epoch data as attributes
-        self.data_dict = data_dict
-        self.spike_times = data_dict['spike_times']
-        self.meta = data_dict['identification']
-        self.pos = data_dict['position_df']
-
-        self.lin_dict = lin_dict
-
-        self.traj_dict = traj_dict
-        self.traj_times_dict = traj_dict['trajectory_start_end_times_in_pos_df']
-        self.traj_times_table = self.all_traj_times()
-
-    def all_traj_times(self):
-        data_list = []
-        for well_pair, start_end_times_list in self.traj_times_dict.items():
-            for start_end_times in start_end_times_list:
-                row = {'start_time': start_end_times[0],
-                       'end_time': start_end_times[1],
-                       'start_well': well_pair[0],
-                       'end_well': well_pair[1]}
-                data_list.append(row)
-
-        column_names = list(row.keys())
-        traj_times_table = pd.DataFrame(data_list).sort_values(by=column_names,
-                                                               ignore_index=True)
-        return traj_times_table
-
-    def bin(self, target_region='HPc', spike_threshold=None,
-            bin_width=100, bin_type='time', bin_rep='left',
-            boxcox=0.5,
-            filter_fn='none', **filter_kwargs):
-        '''
-        spike_threshold: int
-            throw away neurons that spike less than the threshold during the epoch
-        bin_width:     float
-            Bin width for binning spikes. Note the behavior is sampled at 25ms
-        bin_type : str
-            Whether to bin spikes along time or position. Currently only time supported
-        boxcox: float or None
-            Apply boxcox transformation
-        filter_fn: str
-            Check filter_dict
-        filter_kwargs
-            keyword arguments for filter_fn
-        '''
-
-        # unpack data
-        unit_spiking_times = self.collect_unit_spiking_times(
-            target_region=target_region, spike_threshold=spike_threshold)
-
-        # create bins
-        t = self.pos['time'].values
-        bins, bin_width = create_bins(t, bin_width_ms=bin_width, bin_type=bin_type)
-
-        # covnert smoothin bandwidth to indices
-        if filter_fn == 'gaussian':
-            filter_kwargs['sigma'] /= bin_width
-            filter_kwargs['sigma'] = min(1, filter_kwargs['sigma'])
-            print(filter_kwargs['sigma'])
-
-        # get spike rates time series from unit spike times
-        spike_rates = get_spike_rates(unit_spiking_times, bins, t0=t[0],
-                                      filter_fn=filter_fn,
-                                      boxcox=boxcox, **filter_kwargs)
-
-        # Align behavior with the binned spike rates
-        bin_centers, pos_binned = self.get_aligned_behavior(bins)
-
-        # collect and return binned data
-        dat = {}
-        dat['spike_rates'] = spike_rates
-        dat['pos'] = pos_binned
-
-        if bin_rep == 'center':
-            dat['times'] = bin_centers  # midpoints
-        elif bin_rep == 'left':
-            dat['times'] = bins[:-1]    # left endpoints
-        elif bin_rep == 'right':
-            dat['times'] = bins[1:]     # right endpoints
-        else:
-            raise ValueError('bin_rep should be one of center, left or right.')
-
-        return dat
-
-    def collect_unit_spiking_times(self, target_region='HPc', spike_threshold=None):
-        ''' Collect single units located in the target region (e.g. hippocampus)
-        and optionally apply threshold on the total number of spikes.
-        '''
-        unit_spiking_times = collect_unit_spiking_times(
-            self.spike_times, self.meta,
-            target_region=target_region, spike_threshold=spike_threshold)
-        return unit_spiking_times
-
-    def get_aligned_behavior(self, bins):
-        t = self.pos['time'].values
-        pos_linear = self.pos['position_linear'].values
-        bin_centers, pos_binned = align_behavior(t, pos_linear, bins,
-                                                 return_bin_centers=True)
-        return bin_centers, pos_binned
+        super().__init__(path, animal='peanut', day=day, epoch=epoch, verbose=1)
