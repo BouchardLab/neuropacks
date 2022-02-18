@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import os
 import numpy as np
 import scipy as sp
 
@@ -37,6 +38,8 @@ class NSDSNWBAudio:
             Intervals/trails tables.
         """
         self.nwb_path = nwb_path
+        self.block_name = os.path.basename(nwb_path).split('.nwb')[0]
+
         self.ecog = None
         self.poly = None
         self.stimulus = self._get_stimulus_waveform()
@@ -51,6 +54,20 @@ class NSDSNWBAudio:
                 self.electrode_df = nwb.electrodes.to_dataframe()
             except Exception:
                 self.electrode_df = None
+
+    def get_electrode_positions(self, data_source):
+        ''' Returns relative electrode positions for the specified data source.
+        data_source : str
+            Either 'ecog' or 'poly'.
+        '''
+        elec = self.electrode_df
+        data_source_cased = NEURAL_DATA_SOURCES[data_source.lower()]
+        device_idx = (elec['group_name'] == data_source_cased)   # case sensitive!
+        electrode_positions = np.array([elec['rel_x'][device_idx],
+                                        elec['rel_y'][device_idx],
+                                        elec['rel_z'][device_idx]])
+        return electrode_positions
+
 
     def _load_ecog(self, load_data=True):
         """Load ecog data, if available.
@@ -128,6 +145,7 @@ class NSDSNWBAudio:
                 if not n.startswith('wvlt_'):
                     continue
                 if data_source in n.lower():
+                    bands = di[n].bands[:]
                     rate = di[n].rate
                     starting_time = di[n].starting_time
                     if load_data:
@@ -151,6 +169,7 @@ class NSDSNWBAudio:
             idxs = self.electrode_df['group_name'] == data_source_cased
             good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
             return SimpleNamespace(name=name,
+                                   bands=bands,
                                    data=data_holder[0],
                                    rate=rate,
                                    n_timepoints=n_timepoints,
