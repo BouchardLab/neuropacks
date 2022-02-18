@@ -39,7 +39,7 @@ class NSDSNWBAudio:
         self.nwb_path = nwb_path
         self.ecog = None
         self.poly = None
-        self.stimulus = None
+        self.stimulus = self._get_stimulus_waveform()
         self._stimulus_envelope = None
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
