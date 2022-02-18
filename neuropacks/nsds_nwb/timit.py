@@ -34,7 +34,7 @@ class TIMIT(NSDSNWBAudio):
         self.n_trials = len(idxs)   # stimulus trials only!
 
         if 'wav' in encoding:
-            stim_list = self._get_trialized_stim(type='wav')
+            stim_list = self.get_trialized_stim(type='wav')
             # design = stim_list
             # downsample to sample_rate?? not very informative
             design = []
@@ -44,11 +44,11 @@ class TIMIT(NSDSNWBAudio):
                 design.append(resampled)
 
         elif 'env' in encoding:
-            design = self._get_trialized_stim(type='env')
+            design = self.get_trialized_stim(type='env')
             # raise NotImplementedError('TODO')
 
         elif 'spectro' in encoding:
-            stim_list = self._get_trialized_stim(type='wav')
+            stim_list = self.get_trialized_stim(type='wav')
             design = []
             for stim in stim_list:
                 t, f, spectro = make_spectrogram(stim.data, stim.rate,
@@ -101,7 +101,7 @@ class TIMIT(NSDSNWBAudio):
         if neural_data not in ['ecog', 'poly']:
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
-        responses_list, baselines_list = self._get_trialized_responses(
+        responses_list, baselines_list = self.get_trialized_responses(
             neural_data, in_memory=in_memory)
 
         baseline = np.concatenate(baselines_list, axis=0)   # (timepoints, channels)
