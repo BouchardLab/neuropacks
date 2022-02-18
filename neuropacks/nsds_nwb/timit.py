@@ -1,23 +1,30 @@
 import numpy as np
 
-from process_nwb.resample import resample
-
 from neuropacks.nsds_nwb.nsds_nwb import NSDSNWBAudio
 from neuropacks.nsds_nwb.utils import normalize_neural
 
 
-class TIMIT(NSDSNWBAudio):
+class ContinuousStimuli(NSDSNWBAudio):
+    '''Neuropack for NSDS auditory experiment with continuous stimulus type.
+
+    The "continuous" stimulus type has two properties:
+        - Stimulus does not have simple parameterization (like WN or Tone).
+        - Trial lengths could vary from trial to trial.
+
+    TIMIT and DynamicMovingRipples (DMR) blocks should use this class.
+    '''
     def __init__(self, nwb_path):
         super().__init__(nwb_path)
 
     def get_design_matrix(self):
-        """Create the trial design matrix.
+        """Create the trial design "matrix".
 
-        For TIMIT block, the design matrix simply returns the stimulus waveforms
+        For continuous stimuli, simply returns the stimulus waveforms
         (wrapped into a SimpleNamespace object) from each stimulus trial.
         For timit998, for example, there should be 998 trials.
 
-        We could add more options for stimulus encoding (not just waveforms).
+        We could add more options for stimulus encoding (not just waveforms)
+        as appropriate for individual stimulus types.
 
         Returns
         -------
@@ -61,3 +68,13 @@ class TIMIT(NSDSNWBAudio):
             res_trial = np.transpose(res[0].mean(axis=-1), (1, 0))  # (channels, timepoints)
             response.append(res_trial)
         return response
+
+
+class TIMIT(ContinuousStimuli):
+    def __init__(self, nwb_path):
+        super().__init__(nwb_path)
+
+
+class DynamicMovingRipples(ContinuousStimuli):
+    def __init__(self, nwb_path):
+        super().__init__(nwb_path)
