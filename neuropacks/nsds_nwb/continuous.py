@@ -36,7 +36,7 @@ class ContinuousStimuli(NSDSNWBAudio):
         self.n_trials = len(design)   # stimulus trials only!
         return design
 
-    def get_response_matrix(self, neural_data='ecog', in_memory=True):
+    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None):
         """Create the neural response matrix.
 
         Parameters
@@ -60,12 +60,19 @@ class ContinuousStimuli(NSDSNWBAudio):
         responses_list, baselines_list = self.get_trialized_responses(
             neural_data, in_memory=in_memory)
 
+        if band_idx is None:
+            band_idx = slice(None)
+
         baseline = np.concatenate(baselines_list, axis=0)   # (timepoints, channels)
         response = []
         for res in responses_list:
             # add a new axis 0 for normalize_neural
             res, _, _ = normalize_neural(res[np.newaxis], baseline)
-            res_trial = np.transpose(res[0].mean(axis=-1), (1, 0))  # (channels, timepoints)
+
+            # average over select bands
+            res_bnd = np.mean(res[0][..., band_idx], axis=-1)
+
+            res_trial = np.transpose(res_bnd, (1, 0))  # (channels, timepoints)
             response.append(res_trial)
         return response
 

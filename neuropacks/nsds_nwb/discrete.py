@@ -15,7 +15,7 @@ class DiscreteStimuli(NSDSNWBAudio):
     def get_design_matrix(self):
         raise NotImplementedError('Implement for specific stimulus type.')
 
-    def get_response_matrix(self, neural_data='ecog', in_memory=True):
+    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None):
         """Create the neural response matrix.
 
         Parameters
@@ -36,7 +36,13 @@ class DiscreteStimuli(NSDSNWBAudio):
         baseline = np.concatenate(baseline, axis=0)
         response = np.stack(response)
         response, mean, std = normalize_neural(response, baseline)
-        return np.transpose(response.mean(axis=-1), (0, 2, 1))
+
+        # average over select bands
+        if band_idx is None:
+            band_idx = slice(None)
+        response_bnd = np.mean(response[..., band_idx], axis=-1)
+
+        return np.transpose(response_bnd, (0, 2, 1))
 
     def _get_trialized_responses(self, neural_data, in_memory=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
