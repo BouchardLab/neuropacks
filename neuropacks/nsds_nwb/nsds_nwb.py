@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import numpy as np
 import scipy as sp
 
 from pynwb import NWBHDF5IO
@@ -38,7 +39,7 @@ class NSDSNWBAudio:
         self.nwb_path = nwb_path
         self.ecog = None
         self.poly = None
-        self.stimulus = None
+        self.stimulus = self._get_stimulus_waveform()
         self._stimulus_envelope = None
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
@@ -70,6 +71,30 @@ class NSDSNWBAudio:
         return self._get_processed_neural_data('poly', load_data=True,
                                                start_time=start_time,
                                                stop_time=stop_time)
+
+    def get_trialized_responses(self, neural_data, in_memory=True):
+        data_ns = self._get_processed_neural_data(neural_data, load_data=in_memory)
+        good_electrodes = data_ns.good_electrodes
+
+        responses_list = []
+        baselines_list = []
+        for ii, row in self.intervals.iterrows():
+            if in_memory:
+                idx = slice_interval(row['start_time'], row['stop_time'],
+                                     rate=data_ns.rate,
+                                     t_offset=data_ns.starting_time)
+                data_sliced = data_ns.data[idx]
+            else:
+                data_sliced = self._get_processed_neural_data(
+                    neural_data,
+                    start_time=row['start_time'],
+                    stop_time=row['stop_time']).data
+
+            if row['sb'] == 's':
+                responses_list.append(data_sliced[:, good_electrodes])
+            if row['sb'] == 'b':
+                baselines_list.append(data_sliced[:, good_electrodes])
+        return responses_list, baselines_list
 
     def _get_processed_neural_data(self, data_source,
                                    load_data=True, start_time=None, stop_time=None):
@@ -148,6 +173,39 @@ class NSDSNWBAudio:
             Stop time for loading data from an interval.
         '''
         return self._get_stimulus_waveform(start_time=start_time, stop_time=stop_time)
+
+    def get_trialized_stim(self, type='waveform'):
+        if self.stimulus is None:
+            self.stimulus = self._get_stimulus_waveform()
+
+        if 'wav' in type:
+            stim_ = self.stimulus
+        elif 'env' in type:
+            stim_ = SimpleNamespace(name='stimulus_envelope',
+                                    data=self.stimulus_envelope,
+                                    rate=self.stimulus.rate,
+                                    n_timepoints=self.stimulus_envelope.shape[0],
+                                    starting_time=self.stimulus.starting_time)
+        else:
+            raise ValueError('unknown data type')
+
+        stim_wav_list = []
+        for ii, row in self.intervals.iterrows():
+            if row['sb'] != 's':
+                continue
+
+            idx = slice_interval(row['start_time'], row['stop_time'],
+                                 rate=stim_.rate,
+                                 t_offset=stim_.starting_time)
+
+            stim_sliced = SimpleNamespace(name=f'stim_trial{ii}',
+                                          data=stim_.data[idx],
+                                          rate=stim_.rate,
+                                          n_timepoints=np.sum(idx),
+                                          starting_time=stim_.starting_time)
+            stim_wav_list.append(stim_sliced)
+        # list of namespace objects
+        return stim_wav_list
 
     def _get_stimulus_waveform(self, start_time=None, stop_time=None):
         """Load and return the stimulus waveform.
