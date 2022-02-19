@@ -102,7 +102,7 @@ class Tone(DiscreteStimuli):
             Design matrix dataframe. Each row is a trial and each column is a stimulus parameter.
         """
         idxs = self.intervals['sb'] == 's'
-        self.n_trials = len(idxs)
+        self.n_trials = np.sum(idxs)
         if encoding in ['label', 'onehot']:
             frq_enc = skpre.LabelEncoder()
             frq_enc.fit(self.unique_frequencies)
@@ -131,5 +131,24 @@ class WhiteNoise(DiscreteStimuli):
     def __init__(self, nwb_path):
         super().__init__(nwb_path)
 
-    def get_design_matrix(self):
-        raise NotImplementedError('TODO')
+    def get_design_matrix(self, encoding='label'):
+        """Create the trial design matrix.
+
+        Parameters
+        ----------
+        encoding : str
+            How the design matrix should be encoded.
+            Options are ['label', 'value', 'onehot']
+
+        Returns
+        -------
+        design : dataframe
+            Design matrix dataframe. Each row is a trial and each column is a stimulus parameter.
+        """
+        self.n_trials = np.sum(self.intervals['sb'] == 's')
+                                         
+        if encoding in ['label', 'onehot', 'value']:
+            design = pd.DataFrame({'amplitude': np.ones(self.n_trials)})                         
+        else:
+            raise ValueError(f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
+        return design
