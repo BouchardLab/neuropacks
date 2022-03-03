@@ -15,7 +15,8 @@ class DiscreteStimuli(NSDSNWBAudio):
     def get_design_matrix(self):
         raise NotImplementedError('Implement for specific stimulus type.')
 
-    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None):
+    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None,
+                            normalize_method='zscore'):
         """Create the neural response matrix.
 
         Parameters
@@ -26,6 +27,16 @@ class DiscreteStimuli(NSDSNWBAudio):
         in_memory : bool
             Whether to load the entire dataset into memory intermediately before trializing it. This
             is considerably faster if the whole dataset fits into memory.
+        band_idx : int or slice
+            Select which bands to average over. If None, choose all available bands.
+        normalize_method : str
+            Specify method for normalize_neural function.
+            Options are ['zscore' (default), 'ratio']
+
+        Returns:
+        --------
+        response : ndarray
+            Response matrix with shape (n_trials, n_channels, n_timepoints)
         """
         if neural_data not in ['ecog', 'poly']:
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
@@ -35,7 +46,8 @@ class DiscreteStimuli(NSDSNWBAudio):
 
         baseline = np.concatenate(baseline, axis=0)
         response = np.stack(response)
-        response, mean, std = normalize_neural(response, baseline)
+        response, mean, std = normalize_neural(response, baseline,
+                                               method=normalize_method)
 
         # average over select bands
         if band_idx is None:

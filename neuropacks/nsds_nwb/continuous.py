@@ -36,7 +36,8 @@ class ContinuousStimuli(NSDSNWBAudio):
         self.n_trials = len(design)   # stimulus trials only!
         return design
 
-    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None):
+    def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None,
+                            normalize_method='zscore'):
         """Create the neural response matrix.
 
         Parameters
@@ -47,6 +48,11 @@ class ContinuousStimuli(NSDSNWBAudio):
         in_memory : bool
             Whether to load the entire dataset into memory intermediately before trializing it. This
             is considerably faster if the whole dataset fits into memory.
+        band_idx : int or slice
+            Select which bands to average over. If None, choose all available bands.
+        normalize_method : str
+            Specify method for normalize_neural function.
+            Options are ['zscore' (default), 'ratio']
 
         Returns:
         --------
@@ -67,7 +73,8 @@ class ContinuousStimuli(NSDSNWBAudio):
         response = []
         for res in responses_list:
             # add a new axis 0 for normalize_neural
-            res, _, _ = normalize_neural(res[np.newaxis], baseline)
+            res, _, _ = normalize_neural(res[np.newaxis], baseline,
+                                         method=normalize_method)
 
             # average over select bands
             res_bnd = np.mean(res[0][..., band_idx], axis=-1)
