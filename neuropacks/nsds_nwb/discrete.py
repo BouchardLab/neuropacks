@@ -47,36 +47,37 @@ class DiscreteStimuli(NSDSNWBAudio):
     def get_trialized_responses(self, neural_data, in_memory=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
         '''
-        data = []
-        with NWBHDF5IO(self.nwb_path, 'r') as io:
-            nwb = io.read()
-            di = nwb.processing['preprocessing'].data_interfaces
-            for n in di.keys():
-                if neural_data in n.lower():
-                    if in_memory:
-                        data.append(di[n].data[:])
-                    else:
-                        data.append(di[n].data)
-                    rate = di[n].rate
-                    starting_time = di[n].starting_time
-            if len(data) == 1:
-                idxs = self.electrode_df['group_name'] == 'ECoG'
-                good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
-                data = data[0]
-            else:
-                raise ValueError(f'Multiple {neural_data} entries found.')
-            baseline = []
-            response = []
-            for ii, row in self.intervals.iterrows():
-                start = row['start_time']
-                stop = row['stop_time']
-                starti = int((start - starting_time) * rate)
-                stopi = int((stop - starting_time) * rate)
-                if row['sb'] == 'b':
-                    baseline.append(data[starti:stopi][:, good_electrodes])
-                if row['sb'] == 's':
-                    response.append(data[starti:stopi][:, good_electrodes])
-        return response, baseline
+        # data = []
+        # with NWBHDF5IO(self.nwb_path, 'r') as io:
+        #     nwb = io.read()
+        #     di = nwb.processing['preprocessing'].data_interfaces
+        #     for n in di.keys():
+        #         if neural_data in n.lower():
+        #             if in_memory:
+        #                 data.append(di[n].data[:])
+        #             else:
+        #                 data.append(di[n].data)
+        #             rate = di[n].rate
+        #             starting_time = di[n].starting_time
+        #     if len(data) == 1:
+        #         idxs = self.electrode_df['group_name'] == 'ECoG'
+        #         good_electrodes = ~self.electrode_df['bad'].loc[idxs].values
+        #         data = data[0]
+        #     else:
+        #         raise ValueError(f'Multiple {neural_data} entries found.')
+        #     baseline = []
+        #     response = []
+        #     for ii, row in self.intervals.iterrows():
+        #         start = row['start_time']
+        #         stop = row['stop_time']
+        #         starti = int((start - starting_time) * rate)
+        #         stopi = int((stop - starting_time) * rate)
+        #         if row['sb'] == 'b':
+        #             baseline.append(data[starti:stopi][:, good_electrodes])
+        #         if row['sb'] == 's':
+        #             response.append(data[starti:stopi][:, good_electrodes])
+        # return response, baseline
+        return super().get_trialized_responses(neural_data, in_memory=in_memory)
 
 
 class Tone(DiscreteStimuli):
