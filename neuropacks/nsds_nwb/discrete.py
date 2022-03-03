@@ -131,14 +131,14 @@ class WhiteNoise(DiscreteStimuli):
     def __init__(self, nwb_path):
         super().__init__(nwb_path)
 
-    def get_design_matrix(self, encoding='label'):
+    def get_design_matrix(self, encoding='value'):
         """Create the trial design matrix.
 
         Parameters
         ----------
         encoding : str
             How the design matrix should be encoded.
-            Options are ['label', 'value', 'onehot']
+            Currently the only supported option is 'value'.
 
         Returns
         -------
@@ -146,9 +146,9 @@ class WhiteNoise(DiscreteStimuli):
             Design matrix dataframe. Each row is a trial and each column is a stimulus parameter.
         """
         self.n_trials = np.sum(self.intervals['sb'] == 's')
-                                         
-        if encoding in ['label', 'onehot', 'value']:
-            design = pd.DataFrame({'amplitude': np.ones(self.n_trials)})                         
+
+        if encoding == 'value':
+            design = pd.DataFrame({'amplitude': np.ones(self.n_trials)})
         else:
-            raise ValueError(f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
+            raise ValueError(f"The only available `encoding` for wn is 'value'. Got {encoding}.")
         return design
