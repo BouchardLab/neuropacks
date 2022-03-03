@@ -30,7 +30,7 @@ class DiscreteStimuli(NSDSNWBAudio):
         if neural_data not in ['ecog', 'poly']:
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
-        response, baseline = self._get_trialized_responses(
+        response, baseline = self.get_trialized_responses(
             neural_data, in_memory=in_memory)
 
         baseline = np.concatenate(baseline, axis=0)
@@ -44,7 +44,7 @@ class DiscreteStimuli(NSDSNWBAudio):
 
         return np.transpose(response_bnd, (0, 2, 1))
 
-    def _get_trialized_responses(self, neural_data, in_memory=True):
+    def get_trialized_responses(self, neural_data, in_memory=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
         '''
         data = []
