@@ -16,7 +16,8 @@ class DiscreteStimuli(NSDSNWBAudio):
         raise NotImplementedError('Implement for specific stimulus type.')
 
     def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None,
-                            normalize_method='zscore', pre_stim=0, post_stim=0):
+                            normalize_method='zscore', pre_stim=0, post_stim=0,
+                            good_electrodes_flag=True):
         """Create the neural response matrix.
 
         Parameters
@@ -42,7 +43,8 @@ class DiscreteStimuli(NSDSNWBAudio):
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
         response, baseline, t = self.get_trialized_responses(
-            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim)
+            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim, 
+            good_electrodes_flag=good_electrodes_flag)
 
         baseline = np.concatenate(baseline, axis=0)
         response = np.stack(response)
@@ -56,7 +58,7 @@ class DiscreteStimuli(NSDSNWBAudio):
 
         return np.transpose(response_bnd, (0, 2, 1)), t
 
-    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0):
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
         '''
         # data = []
@@ -90,7 +92,8 @@ class DiscreteStimuli(NSDSNWBAudio):
         #             response.append(data[starti:stopi][:, good_electrodes])
         # return response, baseline
         return super().get_trialized_responses(neural_data, in_memory=in_memory,
-                                               pre_stim=pre_stim, post_stim=post_stim)
+                                               pre_stim=pre_stim, post_stim=post_stim,
+                                               good_electrodes_flag=good_electrodes_flag)
 
 
 class Tone(DiscreteStimuli):
