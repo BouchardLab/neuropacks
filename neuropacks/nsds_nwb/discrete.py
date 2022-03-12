@@ -16,7 +16,7 @@ class DiscreteStimuli(NSDSNWBAudio):
         raise NotImplementedError('Implement for specific stimulus type.')
 
     def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None,
-                            normalize_method='zscore'):
+                            normalize_method='zscore', pre_stim=0, post_stim=0):
         """Create the neural response matrix.
 
         Parameters
@@ -41,8 +41,8 @@ class DiscreteStimuli(NSDSNWBAudio):
         if neural_data not in ['ecog', 'poly']:
             raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
-        response, baseline = self.get_trialized_responses(
-            neural_data, in_memory=in_memory)
+        response, baseline, t = self.get_trialized_responses(
+            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim)
 
         baseline = np.concatenate(baseline, axis=0)
         response = np.stack(response)
@@ -54,9 +54,9 @@ class DiscreteStimuli(NSDSNWBAudio):
             band_idx = slice(None)
         response_bnd = np.mean(response[..., band_idx], axis=-1)
 
-        return np.transpose(response_bnd, (0, 2, 1))
+        return np.transpose(response_bnd, (0, 2, 1)), t
 
-    def get_trialized_responses(self, neural_data, in_memory=True):
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
         '''
         # data = []
@@ -89,7 +89,8 @@ class DiscreteStimuli(NSDSNWBAudio):
         #         if row['sb'] == 's':
         #             response.append(data[starti:stopi][:, good_electrodes])
         # return response, baseline
-        return super().get_trialized_responses(neural_data, in_memory=in_memory)
+        return super().get_trialized_responses(neural_data, in_memory=in_memory,
+                                               pre_stim=pre_stim, post_stim=post_stim)
 
 
 class Tone(DiscreteStimuli):

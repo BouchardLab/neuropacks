@@ -89,29 +89,41 @@ class NSDSNWBAudio:
                                                start_time=start_time,
                                                stop_time=stop_time)
 
-    def get_trialized_responses(self, neural_data, in_memory=True):
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0):
         data_ns = self._get_processed_neural_data(neural_data, load_data=in_memory)
         good_electrodes = data_ns.good_electrodes
 
         responses_list = []
         baselines_list = []
+        t = None
         for ii, row in self.intervals.iterrows():
+            
+            if row['sb'] == 's':
+                start_time = row['start_time'] + pre_stim
+                stop_time = row['stop_time'] + post_stim
+            if row['sb'] == 'b':
+                start_time = row['start_time']
+                stop_time = row['stop_time']
+                
             if in_memory:
-                idx = slice_interval(row['start_time'], row['stop_time'],
+                idx = slice_interval(start_time, stop_time,
                                      rate=data_ns.rate,
                                      t_offset=data_ns.starting_time)
                 data_sliced = data_ns.data[idx]
             else:
                 data_sliced = self._get_processed_neural_data(
                     neural_data,
-                    start_time=row['start_time'],
-                    stop_time=row['stop_time']).data
+                    start_time=start_time,
+                    stop_time=stop_time).data
 
             if row['sb'] == 's':
-                responses_list.append(data_sliced[:, good_electrodes])
+                responses_list.append(data_sliced[:, good_electrodes])                
+                if t is None:
+                    t = np.linspace(pre_stim, row['start_time'] - row['stop_time'] + post_stim, 
+                                    responses_list[-1].shape[0])
             if row['sb'] == 'b':
                 baselines_list.append(data_sliced[:, good_electrodes])
-        return responses_list, baselines_list
+        return responses_list, baselines_list, t
 
     def _get_processed_neural_data(self, data_source,
                                    load_data=True, start_time=None, stop_time=None):
