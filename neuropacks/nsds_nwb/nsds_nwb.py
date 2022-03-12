@@ -89,9 +89,12 @@ class NSDSNWBAudio:
                                                start_time=start_time,
                                                stop_time=stop_time)
 
-    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0):
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
         data_ns = self._get_processed_neural_data(neural_data, load_data=in_memory)
-        good_electrodes = data_ns.good_electrodes
+        if good_electrodes_flag:
+            good_electrodes = data_ns.good_electrodes
+        else:
+            good_electrodes = [True]*len(data_ns.good_electrodes)
 
         responses_list = []
         baselines_list = []
