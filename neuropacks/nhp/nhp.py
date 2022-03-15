@@ -93,9 +93,7 @@ class NHP:
 
         return cursor_pos_binned
 
-    def get_response_matrix(
-        self, bin_width, region='M1', transform='square_root'
-    ):
+    def get_response_matrix(self, bin_width, region='M1', transform='sqrt'):
         """Create the response matrix by binning the spike times.
 
         Parameters
@@ -107,8 +105,9 @@ class NHP:
             The region to create a response matrix for ('M1' or 'S1').
 
         transform : string
-            The transform to apply to the spike counts. Available option is
-            'square_root'. If None, no transform is applied.
+            The transform to apply to the spike counts.
+            Available option is 'square_root' (abbrev. 'sqrt').
+            If None, no transform is applied.
 
         Returns
         -------
@@ -137,10 +136,10 @@ class NHP:
             # apply a transform
             if transform is None:
                 Y[:, idx] = binned_spike_counts
-            elif transform == 'square_root':
+            elif transform in ('sqrt', 'square_root'):
                 Y[:, idx] = np.sqrt(binned_spike_counts)
             else:
-                raise ValueError('Transform %s is not valid.' % transform)
+                raise ValueError(f'Transform {transform} is not valid.')
 
         return Y
 
