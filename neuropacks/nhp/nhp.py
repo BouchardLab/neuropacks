@@ -76,12 +76,7 @@ class NHP:
         y_binned : ndarray
             The mean y position in each bin.
         """
-        # calculate number of bins
-        n_bins = int(np.ceil(
-            (self.timestamps[-1] - self.timestamps[0])/bin_width
-        ))
-        bins = np.arange(n_bins + 1) * bin_width + self.timestamps[0]
-        bin_indices = np.digitize(self.timestamps, bins=bins) - 1
+        bins, bin_indices, n_bins = self.bin_times(bin_width)
 
         cursor_pos_binned = np.zeros((n_bins, 2))
 
@@ -120,11 +115,7 @@ class NHP:
         except KeyError:
             raise ValueError(f'Region {region} is neither M1 nor S1.')
 
-        # calculate number of bins
-        n_bins = int(np.ceil(
-            (self.timestamps[-1] - self.timestamps[0])/bin_width
-        ))
-        bins = np.arange(n_bins + 1) * bin_width + self.timestamps[0]
+        bins, _, n_bins = self.bin_times(bin_width)
 
         Y = np.zeros((n_bins, len(spike_times)))
 
@@ -142,6 +133,16 @@ class NHP:
                 raise ValueError(f'Transform {transform} is not valid.')
 
         return Y
+
+    def bin_times(self, bin_width):
+        # calculate number of bins
+        n_bins = int(np.ceil(
+            (self.timestamps[-1] - self.timestamps[0])/bin_width
+        ))
+
+        bins = np.arange(n_bins + 1) * bin_width + self.timestamps[0]
+        bin_indices = np.digitize(self.timestamps, bins=bins) - 1
+        return bins, bin_indices, n_bins
 
     def _read_chan_names(self, data):
 
