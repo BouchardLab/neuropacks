@@ -40,10 +40,11 @@ class DiscreteStimuli(NSDSNWBAudio):
             Response matrix with shape (n_trials, n_channels, n_timepoints)
         """
         if neural_data not in ['ecog', 'poly']:
-            raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
+            raise ValueError(
+                f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
-        response, baseline, t = self.get_trialized_responses(
-            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim, 
+        response, baseline = self.get_trialized_responses(
+            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim,
             good_electrodes_flag=good_electrodes_flag)
 
         baseline = np.concatenate(baseline, axis=0)
@@ -56,7 +57,7 @@ class DiscreteStimuli(NSDSNWBAudio):
             band_idx = slice(None)
         response_bnd = np.mean(response[..., band_idx], axis=-1)
 
-        return np.transpose(response_bnd, (0, 2, 1)), t
+        return np.transpose(response_bnd, (0, 2, 1))
 
     def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
@@ -129,18 +130,23 @@ class Tone(DiscreteStimuli):
                                    'amplitude': amp_enc.transform(self.intervals['amp'].loc[idxs])})
             if encoding == 'onehot':
                 frq_enc1 = skpre.OneHotEncoder()
-                frq_enc1.fit(frq_enc.transform(self.unique_frequencies)[:, np.newaxis])
+                frq_enc1.fit(frq_enc.transform(
+                    self.unique_frequencies)[:, np.newaxis])
                 amp_enc1 = skpre.OneHotEncoder()
-                amp_enc1.fit(amp_enc.transform(self.unique_amplitudes)[:, np.newaxis])
-                frqs = frq_enc1.transform(design['frequency'][:, np.newaxis]).toarray().astype(int)
-                amps = amp_enc1.transform(design['amplitude'][:, np.newaxis]).toarray().astype(int)
+                amp_enc1.fit(amp_enc.transform(
+                    self.unique_amplitudes)[:, np.newaxis])
+                frqs = frq_enc1.transform(
+                    design['frequency'][:, np.newaxis]).toarray().astype(int)
+                amps = amp_enc1.transform(
+                    design['amplitude'][:, np.newaxis]).toarray().astype(int)
                 design = pd.DataFrame({'frequency': frqs.tolist(),
                                        'amplitude': amps.tolist()})
         elif encoding == 'value':
             design = pd.DataFrame({'frequency': self.intervals['frq'].loc[idxs],
                                    'amplitude': self.intervals['amp'].loc[idxs]})
         else:
-            raise ValueError(f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
+            raise ValueError(
+                f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
         return design
 
 
@@ -167,5 +173,6 @@ class WhiteNoise(DiscreteStimuli):
         if encoding == 'value':
             design = pd.DataFrame({'amplitude': np.ones(self.n_trials)})
         else:
-            raise ValueError(f"The only available `encoding` for wn is 'value'. Got {encoding}.")
+            raise ValueError(
+                f"The only available `encoding` for wn is 'value'. Got {encoding}.")
         return design
