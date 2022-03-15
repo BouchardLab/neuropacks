@@ -83,7 +83,7 @@ class NHP:
         y_binned : ndarray
             The mean y position in each bin.
         """
-        bins, bin_indices, n_bins = self.bin_times(bin_width)
+        bins, bin_indices, n_bins = self._bin_times(bin_width)
 
         cursor_pos_binned = np.zeros((n_bins, 2))
 
@@ -122,7 +122,7 @@ class NHP:
         except KeyError:
             raise ValueError(f'Region {region} is neither M1 nor S1.')
 
-        bins, _, n_bins = self.bin_times(bin_width)
+        bins, _, n_bins = self._bin_times(bin_width)
 
         Y = np.zeros((n_bins, len(spike_times)))
 
@@ -141,7 +141,7 @@ class NHP:
 
         return Y
 
-    def bin_times(self, bin_width):
+    def _bin_times(self, bin_width):
         # calculate number of bins
         n_bins = int(np.ceil(
             (self.timestamps[-1] - self.timestamps[0])/bin_width
