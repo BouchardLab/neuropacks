@@ -47,6 +47,7 @@ class NHP:
         # open up .mat file
         self.data_path = data_path
         data = h5py.File(data_path, 'r')
+        self.chan_names = self._read_chan_names(data)
         self.timestamps = data['t'][0, :]
         self.cursor_pos = data['cursor_pos'][:]
         self.target_pos = data['target_pos'][:]
@@ -172,3 +173,14 @@ class NHP:
                 raise ValueError('Transform %s is not valid.' % transform)
 
         return Y
+
+    def _read_chan_names(self, data):
+
+        def decode_str(int_list):
+            ''' interpret an array of integers to a string,
+            assuming Unicode.
+            '''
+            return ''.join([chr(int(i)) for i in int_list])
+
+        return [decode_str(data[ref][:])
+                for ref in data['chan_names'][:].squeeze()]
