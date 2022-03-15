@@ -17,6 +17,10 @@ class NHP:
         data_path : string
             The path to the NHP dataset.
 
+        chan_names : list
+            List of channel names, formatted as '{region} {channel_idx}',
+            for example 'M1 001'.
+
         timestamps : nd-array, shape (n_timestamps)
             The timestamps, in seconds, for the session.
 
@@ -33,6 +37,9 @@ class NHP:
         n_sorted_units : int
             The number of sorted units per channel. This number excludes the
             unsorted units.
+
+        spike_times : dict
+            Merged dictionary {'M1': M1_spike_times, 'S1': S1_spike_times}.
 
         M1_spike_times : dict
             A dictionary where each key denotes a channel, unit combination in
