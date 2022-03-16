@@ -16,7 +16,8 @@ class DiscreteStimuli(NSDSNWBAudio):
         raise NotImplementedError('Implement for specific stimulus type.')
 
     def get_response_matrix(self, neural_data='ecog', in_memory=True, band_idx=None,
-                            normalize_method='zscore'):
+                            normalize_method='zscore', pre_stim=0, post_stim=0,
+                            good_electrodes_flag=True):
         """Create the neural response matrix.
 
         Parameters
@@ -39,10 +40,12 @@ class DiscreteStimuli(NSDSNWBAudio):
             Response matrix with shape (n_trials, n_channels, n_timepoints)
         """
         if neural_data not in ['ecog', 'poly']:
-            raise ValueError(f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
+            raise ValueError(
+                f"`neural_data` should be one of ['ecog', 'poly'], got {neural_data}")
 
         response, baseline = self.get_trialized_responses(
-            neural_data, in_memory=in_memory)
+            neural_data, in_memory=in_memory, pre_stim=pre_stim, post_stim=post_stim,
+            good_electrodes_flag=good_electrodes_flag)
 
         baseline = np.concatenate(baseline, axis=0)
         response = np.stack(response)
@@ -56,7 +59,7 @@ class DiscreteStimuli(NSDSNWBAudio):
 
         return np.transpose(response_bnd, (0, 2, 1))
 
-    def get_trialized_responses(self, neural_data, in_memory=True):
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
         ''' overrides NSDSNWBAudio method; essentially the same. should confirm
         '''
         # data = []
@@ -89,7 +92,9 @@ class DiscreteStimuli(NSDSNWBAudio):
         #         if row['sb'] == 's':
         #             response.append(data[starti:stopi][:, good_electrodes])
         # return response, baseline
-        return super().get_trialized_responses(neural_data, in_memory=in_memory)
+        return super().get_trialized_responses(neural_data, in_memory=in_memory,
+                                               pre_stim=pre_stim, post_stim=post_stim,
+                                               good_electrodes_flag=good_electrodes_flag)
 
 
 class Tone(DiscreteStimuli):
@@ -125,18 +130,23 @@ class Tone(DiscreteStimuli):
                                    'amplitude': amp_enc.transform(self.intervals['amp'].loc[idxs])})
             if encoding == 'onehot':
                 frq_enc1 = skpre.OneHotEncoder()
-                frq_enc1.fit(frq_enc.transform(self.unique_frequencies)[:, np.newaxis])
+                frq_enc1.fit(frq_enc.transform(
+                    self.unique_frequencies)[:, np.newaxis])
                 amp_enc1 = skpre.OneHotEncoder()
-                amp_enc1.fit(amp_enc.transform(self.unique_amplitudes)[:, np.newaxis])
-                frqs = frq_enc1.transform(design['frequency'][:, np.newaxis]).toarray().astype(int)
-                amps = amp_enc1.transform(design['amplitude'][:, np.newaxis]).toarray().astype(int)
+                amp_enc1.fit(amp_enc.transform(
+                    self.unique_amplitudes)[:, np.newaxis])
+                frqs = frq_enc1.transform(
+                    design['frequency'][:, np.newaxis]).toarray().astype(int)
+                amps = amp_enc1.transform(
+                    design['amplitude'][:, np.newaxis]).toarray().astype(int)
                 design = pd.DataFrame({'frequency': frqs.tolist(),
                                        'amplitude': amps.tolist()})
         elif encoding == 'value':
             design = pd.DataFrame({'frequency': self.intervals['frq'].loc[idxs],
                                    'amplitude': self.intervals['amp'].loc[idxs]})
         else:
-            raise ValueError(f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
+            raise ValueError(
+                f"`encoding` must be one of ['label', 'value', 'onehot'] was {encoding}")
         return design
 
 
@@ -163,5 +173,6 @@ class WhiteNoise(DiscreteStimuli):
         if encoding == 'value':
             design = pd.DataFrame({'amplitude': np.ones(self.n_trials)})
         else:
-            raise ValueError(f"The only available `encoding` for wn is 'value'. Got {encoding}.")
+            raise ValueError(
+                f"The only available `encoding` for wn is 'value'. Got {encoding}.")
         return design

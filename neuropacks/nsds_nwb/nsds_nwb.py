@@ -55,6 +55,19 @@ class NSDSNWBAudio:
             except Exception:
                 self.electrode_df = None
 
+    def get_time_array(self, num_samples, pre_stim, post_stim):
+        ''' Return time array for stimulus trial given number of samples 
+        in a trial and pre_stim (ms) and post_stim (ms) times'''
+        trials_df = self.intervals
+        trials_df = trials_df[trials_df['sb'] == 's']
+        start_time = pre_stim
+        stim_duration = trials_df.iloc[0]['stop_time'] - trials_df.iloc[0]['start_time']
+        stop_time = stim_duration + post_stim
+        time = np.linspace(start_time,
+                           stop_time,
+                           num_samples)
+        return time
+
     def get_electrode_positions(self, data_source):
         ''' Returns relative electrode positions for the specified data source.
         data_source : str
@@ -62,22 +75,24 @@ class NSDSNWBAudio:
         '''
         elec = self.electrode_df
         data_source_cased = NEURAL_DATA_SOURCES[data_source.lower()]
-        device_idx = (elec['group_name'] == data_source_cased)   # case sensitive!
+        # case sensitive!
+        device_idx = (elec['group_name'] == data_source_cased)
         electrode_positions = np.array([elec['rel_x'][device_idx],
                                         elec['rel_y'][device_idx],
                                         elec['rel_z'][device_idx]])
         return electrode_positions
 
-
     def _load_ecog(self, load_data=True):
         """Load ecog data, if available.
         """
-        self.ecog = self._get_processed_neural_data('ecog', load_data=load_data)
+        self.ecog = self._get_processed_neural_data(
+            'ecog', load_data=load_data)
 
     def _load_poly(self, load_data=True, start_time=None, stop_time=None):
         """Load polytrode data, if available.
         """
-        self.poly = self._get_processed_neural_data('poly', load_data=load_data)
+        self.poly = self._get_processed_neural_data(
+            'poly', load_data=load_data)
 
     def get_ecog_interval(self, start_time=None, stop_time=None):
         return self._get_processed_neural_data('ecog', load_data=True,
@@ -89,23 +104,35 @@ class NSDSNWBAudio:
                                                start_time=start_time,
                                                stop_time=stop_time)
 
-    def get_trialized_responses(self, neural_data, in_memory=True):
-        data_ns = self._get_processed_neural_data(neural_data, load_data=in_memory)
-        good_electrodes = data_ns.good_electrodes
+    def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
+        data_ns = self._get_processed_neural_data(
+            neural_data, load_data=in_memory)
+        if good_electrodes_flag:
+            good_electrodes = data_ns.good_electrodes
+        else:
+            good_electrodes = [True]*len(data_ns.good_electrodes)
 
         responses_list = []
         baselines_list = []
         for ii, row in self.intervals.iterrows():
+
+            if row['sb'] == 's':
+                start_time = row['start_time'] + pre_stim
+                stop_time = row['stop_time'] + post_stim
+            if row['sb'] == 'b':
+                start_time = row['start_time']
+                stop_time = row['stop_time']
+
             if in_memory:
-                idx = slice_interval(row['start_time'], row['stop_time'],
+                idx = slice_interval(start_time, stop_time,
                                      rate=data_ns.rate,
                                      t_offset=data_ns.starting_time)
                 data_sliced = data_ns.data[idx]
             else:
                 data_sliced = self._get_processed_neural_data(
                     neural_data,
-                    start_time=row['start_time'],
-                    stop_time=row['stop_time']).data
+                    start_time=start_time,
+                    stop_time=stop_time).data
 
             if row['sb'] == 's':
                 responses_list.append(data_sliced[:, good_electrodes])
@@ -151,7 +178,8 @@ class NSDSNWBAudio:
                     if load_data:
                         data_idx = slice_interval(start_time, stop_time,
                                                   rate, t_offset=starting_time)
-                        data = di[n].data[data_idx]  # first axis is for the timepoints
+                        # first axis is for the timepoints
+                        data = di[n].data[data_idx]
                         n_timepoints, n_channels, n_bands = data.shape
                         if start_time is not None:
                             starting_time = start_time
