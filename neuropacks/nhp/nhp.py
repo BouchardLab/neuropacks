@@ -1,5 +1,6 @@
 import h5py
 import numpy as np
+import pandas as pd
 
 
 class NHP:
@@ -66,6 +67,8 @@ class NHP:
         self.S1_spike_times = self.spike_times['S1']
 
         data.close()
+
+        self.trials, self.target_grid = self._parse_trials()
 
     def get_binned_positions(self, bin_width=0.5):
         """Bin the mouse positions according to a bin width.
@@ -193,3 +196,39 @@ class NHP:
                 spike_times_dict[region][key] = spike_times
 
         return spike_times_dict, n_sorted_units
+
+    def _parse_trials(self):
+        # get x, y target position indices with respect to the 8x8 grid
+        grids = []
+        target_inds = []
+        for axis in (0, 1):
+            grid = np.unique(self.target_pos[axis, :])
+            inds = np.nonzero(
+                np.equal(grid.reshape(1, -1),
+                         self.target_pos[axis, :].reshape(-1, 1)))[1]
+            grids.append(grid)
+            target_inds.append(inds)
+
+        # detect target changes
+        prev_target_pos = np.concatenate((np.empty((2, 1)) * np.nan,
+                                          self.target_pos[:, :-1]), axis=1)
+        target_change = np.all(1 - np.equal(self.target_pos, prev_target_pos),
+                               axis=0)
+        i_start_times = np.nonzero(target_change)[0]
+
+        # construct trials table
+        trials_list = []
+        for cnt, i_start in enumerate(i_start_times):
+            try:
+                i_stop = i_start_times[cnt + 1]
+            except IndexError:
+                i_stop = -1
+
+            row = {'start_time': self.timestamps[i_start],
+                   'stop_time': self.timestamps[i_stop],
+                   'target_pos_x': self.target_pos[0, i_start],
+                   'target_pos_y': self.target_pos[1, i_start],
+                   'target_ind_x': target_inds[0][i_start],
+                   'target_ind_y': target_inds[1][i_start]}
+            trials_list.append(row)
+        return pd.DataFrame(trials_list), grids
