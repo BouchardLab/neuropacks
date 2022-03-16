@@ -86,17 +86,16 @@ class NHP:
         y_binned : ndarray
             The mean y position in each bin.
         """
+        return self.bin_timeseries(self.cursor_pos, bin_width=bin_width)
+
+    def bin_timeseries(self, data_ts, bin_width=0.5):
         bins, bin_indices, n_bins = self._bin_times(bin_width)
 
-        cursor_pos_binned = np.zeros((n_bins, 2))
-
+        data_binned = np.zeros((n_bins, 2))
         for bin_idx in range(n_bins):
             indices = np.argwhere(bin_indices == bin_idx).ravel()
-            cursor_pos_binned[bin_idx] = np.mean(
-                self.cursor_pos[:, indices], axis=1
-            ).T
-
-        return cursor_pos_binned
+            data_binned[bin_idx] = np.mean(data_ts[:, indices], axis=1).T
+        return data_binned
 
     def get_response_matrix(self, bin_width, region='M1', transform='sqrt'):
         """Create the response matrix by binning the spike times.
