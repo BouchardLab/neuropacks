@@ -62,11 +62,11 @@ class NHP:
         self.finger_pos = data['finger_pos'][:]
 
         self.spike_times, self.n_sorted_units = self._read_spike_times(data)
+        data.close()
+
         # keep legacy attributes
         self.M1_spike_times = self.spike_times['M1']
         self.S1_spike_times = self.spike_times['S1']
-
-        data.close()
 
         self.trials, self.target_grid = self._parse_trials()
 
@@ -143,6 +143,11 @@ class NHP:
                 raise ValueError(f'Transform {transform} is not valid.')
 
         return Y
+
+    def get_binned_times(self, bin_width):
+        bins, _, _ = self._bin_times(bin_width)
+        times_bin_center = (bins[1:] + bins[:-1]) / 2
+        return times_bin_center
 
     def _bin_times(self, bin_width):
         # calculate number of bins
