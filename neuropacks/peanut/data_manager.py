@@ -1,13 +1,13 @@
 import os
 import numpy as np
 import pandas as pd
-import pickle
 from copy import deepcopy
 
 from .task import get_traj_outcomes
 
-from neuropacks.utils.binning import (
-    create_bins, bin_spike_times, downsample_by_interp)
+from neuropacks.utils.binning import create_bins, bin_spike_times
+from neuropacks.utils.io import load_pickle
+from neuropacks.utils.signal import downsample_by_interp
 
 
 class DayDataManager():
@@ -474,10 +474,6 @@ class Peanut_SingleEpoch(EpochDataManager):
     def __init__(self, path, *, day, epoch):
         # Note: for peanut_day14, the rat is running during even numbered epochs.
         super().__init__(path, animal='peanut', day=day, epoch=epoch)
-
-
-def load_pickle(filename):
-    return pickle.load(open(filename, 'rb'))
 
 
 def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
