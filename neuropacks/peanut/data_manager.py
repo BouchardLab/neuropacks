@@ -536,17 +536,18 @@ def get_spike_rates(unit_spiking_times, bins,
                     boxcox=0.5, log=None,
                     filter_fn='none', **filter_kwargs):
     if filter_fn == 'none':
-        filter = {}
+        apply_filter = {}
     elif filter_fn == 'gaussian':
         bin_width = bins[1] - bins[0]
         sigma = filter_kwargs['sigma'] / bin_width  # convert to unit of bins
         # sigma = min(1, sigma) # -- ??
-        filter = {'gaussian': sigma}
+        apply_filter = {'gaussian': sigma}
     else:
         raise ValueError(f'unknown filter_fn: got {filter_fn}')
 
-    transform = {'boxcox': boxcox, 'log': log}
+    apply_transform = {'boxcox': boxcox, 'log': log}
 
     spike_rates = bin_spike_times(unit_spiking_times, bins,
-                                  transform=transform, filter=filter)
+                                  apply_transform=apply_transform,
+                                  apply_filter=apply_filter)
     return spike_rates

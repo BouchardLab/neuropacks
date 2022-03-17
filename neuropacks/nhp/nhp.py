@@ -155,7 +155,7 @@ class NHP:
 
         bins, _, n_bins = self._bin_times(bin_width)
         spike_times_array = [spikes for key, spikes in spike_times.items()]
-        Y = bin_spike_times(spike_times_array, bins, transform=transform)
+        Y = bin_spike_times(spike_times_array, bins, apply_transform=transform)
         return Y
 
     def get_binned_times(self, bin_width=0.5):
