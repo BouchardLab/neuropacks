@@ -6,6 +6,28 @@ from neuropacks.utils.signal import box_cox
 
 
 def create_bins(t_start, t_end, bin_width, bin_type='time'):
+    """Create bins for the specified time interval.
+
+    Parameters
+    ----------
+    t_start : float
+        Start time, in an appropriate unit of time (for example seconds).
+        This corresponds to the first value of the output bins.
+    t_end : float
+        End time, in the same unit as the t_start unit.
+        This corresponds to the last value of the output bins.
+    bin_width : float
+        Bin width, in the same unit as the t_start unit.
+    bin_type : str
+        How to balance the bin sizes. For now the only option is 'time'.
+        If 'time', bins have uniform lengths (bin_width) in time.
+
+    Returns
+    -------
+    bins : ndarray, shape (n_bin + 1, )
+        A sequence of time values that starts with t_start and ends with t_end.
+        This gives (n_bins + 1) boundary values that define n_bin intervals.
+    """
     T = t_end - t_start
     if bin_type == 'time':
         bins = np.linspace(t_start, t_end, int(T // bin_width))
