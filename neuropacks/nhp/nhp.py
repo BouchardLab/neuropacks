@@ -25,7 +25,7 @@ class NHP:
         timestamps : nd-array, shape (n_timestamps)
             The timestamps, in seconds, for the session.
 
-        cursor_pose : nd-array, shape (2, n_timestamps)
+        cursor_pos : nd-array, shape (2, n_timestamps)
             The cursor position in x,y coordinates (mm) at each timestamp.
 
         target_pos : nd-array, shape (2, n_timestamps)
@@ -51,6 +51,15 @@ class NHP:
             A dictionary where each key denotes a channel, unit combination in
             S1 and value is an nd-array of spike times, in seconds, during the
             session.
+
+        trials : pandas DataFrame
+            Each row is a trial, i.e., interval with a fixed target position.
+            Columns ('start_time', 'stop_time', 'target_pos_x', 'target_pos_y',
+                     'target_ind_x', 'target_ind_y').
+
+        target_grid : list
+            List of two ndarrays, [x_grid, y_grid].
+            Each of x_grid and y_grid has 8 values by experimental design.
         """
         # open up .mat file
         self.data_path = data_path
@@ -80,15 +89,25 @@ class NHP:
 
         Returns
         -------
-        x_binned : ndarray
-            The mean x position in each bin.
-
-        y_binned : ndarray
-            The mean y position in each bin.
+        pos_binned : ndarray
+            The mean x, y position in each bin. Has shape (n_timestamps, 2).
         """
         return self.bin_timeseries(self.cursor_pos, bin_width=bin_width)
 
     def bin_timeseries(self, data_ts, bin_width=0.5):
+        """Bin the provided timeseries data along the time axis,
+        according to a bin width.
+
+        Parameters
+        ----------
+        bin_width : float
+            The width of the bin, in seconds.
+
+        Returns
+        -------
+        data_binned : ndarray, shape (n_bins, 2)
+            The mean x, y position in each bin.
+        """
         bins, bin_indices, n_bins = self._bin_times(bin_width)
 
         data_binned = np.zeros((n_bins, 2))
@@ -115,9 +134,9 @@ class NHP:
 
         Returns
         -------
-        Y : nd-array, shape (n_trials, n_neurons)
+        Y : nd-array, shape (n_bins, n_units)
             Response matrix containing (transformed) spike counts of each
-            neuron.
+            neuron (single unit).
         """
         try:
             spike_times = self.spike_times[region]
@@ -143,7 +162,19 @@ class NHP:
 
         return Y
 
-    def get_binned_times(self, bin_width):
+    def get_binned_times(self, bin_width=0.5):
+        """Bin time according to a bin width, and return the center values.
+
+        Parameters
+        ----------
+        bin_width : float
+            The width of the bin, in seconds.
+
+        Returns
+        -------
+        times_bin_center : ndarray, shape (n_bins, )
+            The representative time value (center-of-bin) for each bin.
+        """
         bins, _, _ = self._bin_times(bin_width)
         times_bin_center = (bins[1:] + bins[:-1]) / 2
         return times_bin_center
