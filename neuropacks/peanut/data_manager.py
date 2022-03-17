@@ -6,7 +6,8 @@ from copy import deepcopy
 
 from .task import get_traj_outcomes
 
-from neuropacks.utils.binning import spike_times_to_rates, downsample_by_interp
+from neuropacks.utils.binning import (
+    create_bins, bin_spike_times, downsample_by_interp)
 
 
 class DayDataManager():
@@ -503,11 +504,15 @@ def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
             # guessing that this is in ms; convert to seconds
             filter_kwargs['sigma'] /= 1000
 
+    bins = create_bins(t_start=t[0], t_end=t[-1], bin_width=bin_width,
+                       bin_type='time')
+
+    t_binned = get_binned_times(bins, bin_rep=bin_rep)
+
     # get spike rates time series from unit spike times, by binning in time
-    t_binned, spike_rates = spike_times_to_rates(
-        unit_spiking_times, t_start=t[0], t_end=t[-1],
-        bin_width=bin_width, bin_type=bin_type, bin_rep=bin_rep,
-        boxcox=boxcox, filter_fn=filter_fn, **filter_kwargs)
+    spike_rates = get_spike_rates(unit_spiking_times, bins,
+                                  filter_fn=filter_fn,
+                                  boxcox=boxcox, **filter_kwargs)
 
     if pos_linear is not None:
         # downsample behavior to align with the binned spike rates
@@ -516,3 +521,36 @@ def get_binned_times_rates_pos(t, unit_spiking_times, pos_linear,
         pos_binned = None
 
     return t_binned, spike_rates, pos_binned
+
+
+def get_binned_times(bins, bin_rep='center'):
+    # assign a representative time value to each bin
+    if bin_rep == 'center':
+        return (bins[1:] + bins[:-1]) / 2  # midpoints
+    elif bin_rep == 'left':
+        return bins[:-1]    # left endpoints
+    elif bin_rep == 'right':
+        return bins[1:]     # right endpoints
+
+    raise ValueError('bin_rep should be one of (center, left, right); '
+                     f'got {bin_rep}.')
+
+
+def get_spike_rates(unit_spiking_times, bins,
+                    boxcox=0.5, log=None,
+                    filter_fn='none', **filter_kwargs):
+    if filter_fn == 'none':
+        filter = {}
+    elif filter_fn == 'gaussian':
+        bin_width = bins[1] - bins[0]
+        sigma = filter_kwargs['sigma'] / bin_width  # convert to unit of bins
+        # sigma = min(1, sigma) # -- ??
+        filter = {'gaussian': sigma}
+    else:
+        raise ValueError(f'unknown filter_fn: got {filter_fn}')
+
+    transform = {'boxcox': boxcox, 'log': log}
+
+    spike_rates = bin_spike_times(unit_spiking_times, bins,
+                                  transform=transform, filter=filter)
+    return spike_rates

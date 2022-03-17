@@ -4,36 +4,6 @@ from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
 
-def spike_times_to_rates(unit_spiking_times, bins=None,
-                         t_start=None, t_end=None,
-                         bin_width=None, bin_type='time', bin_rep='left',
-                         boxcox=0.5, filter_fn='none', **filter_kwargs):
-    '''
-    bin_width : float
-        Bin width for binning spikes.
-        Should be in the same unit as unit_spiking_times (in most cases seconds).
-    bin_type : str
-        Whether to bin spikes along time or position. Currently only time supported
-    boxcox: float or None
-        Apply boxcox transformation
-    filter_fn: str
-        Check filter_dict
-    filter_kwargs
-        keyword arguments for filter_fn
-    '''
-    if bins is None:
-        bins = create_bins(t_start=t_start, t_end=t_end, bin_width=bin_width,
-                           bin_type='time')
-
-    t_binned = get_binned_times(bins=bins, bin_rep=bin_rep)
-
-    # get spike rates time series from unit spike times
-    spike_rates = get_spike_rates(unit_spiking_times, bins,
-                                  filter_fn=filter_fn,
-                                  boxcox=boxcox, **filter_kwargs)
-    return t_binned, spike_rates
-
-
 def create_bins(t_start, t_end, bin_width, bin_type='time'):
     T = t_end - t_start
     if bin_type == 'time':
@@ -41,44 +11,6 @@ def create_bins(t_start, t_end, bin_width, bin_type='time'):
     else:
         raise ValueError('unknown bin_type')
     return bins
-
-
-def get_binned_times(bins=None, bin_rep='center',
-                     t_start=None, t_end=None, bin_width=None, bin_type='time'):
-    if bins is None:
-        bins = create_bins(t_start=t_start, t_end=t_end, bin_width=bin_width,
-                           bin_type=bin_type)
-
-    # assign a representative time value to each bin
-    if bin_rep == 'center':
-        return (bins[1:] + bins[:-1]) / 2  # midpoints
-    elif bin_rep == 'left':
-        return bins[:-1]    # left endpoints
-    elif bin_rep == 'right':
-        return bins[1:]     # right endpoints
-
-    raise ValueError('bin_rep should be one of (center, left, right); '
-                     f'got {bin_rep}.')
-
-
-def get_spike_rates(unit_spiking_times, bins,
-                    boxcox=0.5, log=None,
-                    filter_fn='none', **filter_kwargs):
-    if filter_fn == 'none':
-        filter = {}
-    elif filter_fn == 'gaussian':
-        bin_width = bins[1] - bins[0]
-        sigma = filter_kwargs['sigma'] / bin_width  # convert to unit of bins
-        # sigma = min(1, sigma) # -- ??
-        filter = {'gaussian': sigma}
-    else:
-        raise ValueError(f'unknown filter_fn: got {filter_fn}')
-
-    transform = {'boxcox': boxcox, 'log': log}
-
-    spike_rates = bin_spike_times(unit_spiking_times, bins,
-                                  transform=transform, filter=filter)
-    return spike_rates
 
 
 def bin_spike_times(spike_times_by_units, bins, transform={}, filter={}):
