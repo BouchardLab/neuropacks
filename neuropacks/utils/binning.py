@@ -30,7 +30,15 @@ def create_bins(t_start, t_end, bin_width, bin_type='time'):
     """
     T = t_end - t_start
     if bin_type == 'time':
-        bins = np.linspace(t_start, t_end, int(T // bin_width))
+        # Bug: the number was off by 1 here, because the endpoint is included.
+        # More general issue with linspace: When T is not an exactly multiple
+        # of bin_width, the resulting bins may not have the requested bin_width.
+        # ---
+        # bins = np.linspace(t_start, t_end, int(T // bin_width))
+
+        # fixed to use exact bin widths
+        n_bins = int(np.ceil(T / bin_width))
+        bins = t_start + bin_width * np.arange(n_bins + 1)
     else:
         raise ValueError('unknown bin_type')
     return bins
