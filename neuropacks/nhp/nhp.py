@@ -176,9 +176,7 @@ class NHP:
         return times_bin_center
 
     def _bin_times(self, bin_width):
-        bins = create_bins(t_start=self.timestamps[0],
-                           t_stop=self.timestamps[-1],
-                           bin_width=bin_width)
+        bins = create_bins(self.timestamps[0], self.timestamps[-1], bin_width)
         n_bins = len(bins) - 1
         bin_indices = np.digitize(self.timestamps, bins=bins) - 1
         return bins, bin_indices, n_bins
