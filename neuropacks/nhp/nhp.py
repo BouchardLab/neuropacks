@@ -2,7 +2,7 @@ import h5py
 import numpy as np
 import pandas as pd
 
-from neuropacks.utils.binning import bin_spike_times
+from neuropacks.utils.binning import bin_spike_times, create_bins
 
 
 class NHP:
@@ -176,12 +176,10 @@ class NHP:
         return times_bin_center
 
     def _bin_times(self, bin_width):
-        # calculate number of bins
-        n_bins = int(np.ceil(
-            (self.timestamps[-1] - self.timestamps[0])/bin_width
-        ))
-
-        bins = np.arange(n_bins + 1) * bin_width + self.timestamps[0]
+        bins = create_bins(t_start=self.timestamps[0],
+                           t_stop=self.timestamps[-1],
+                           bin_width=bin_width)
+        n_bins = len(bins) - 1
         bin_indices = np.digitize(self.timestamps, bins=bins) - 1
         return bins, bin_indices, n_bins
 
