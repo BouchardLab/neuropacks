@@ -2,6 +2,8 @@ import h5py
 import numpy as np
 import pandas as pd
 
+from neuropacks.utils.binning import bin_spike_times
+
 
 class NHP:
     def __init__(self, data_path):
@@ -138,28 +140,22 @@ class NHP:
             Response matrix containing (transformed) spike counts of each
             neuron (single unit).
         """
+        if transform is None:
+            # no transform; just pass None to bin_spike_times
+            pass
+        elif transform in ('sqrt', 'square_root'):
+            transform = np.sqrt
+        else:
+            raise ValueError(f'Invalid transform {transform} for this dataset.')
+
         try:
             spike_times = self.spike_times[region]
         except KeyError:
             raise ValueError(f'Region {region} is neither M1 nor S1.')
 
         bins, _, n_bins = self._bin_times(bin_width)
-
-        Y = np.zeros((n_bins, len(spike_times)))
-
-        # iterate over spike time arrays in corresponding dictionary
-        for idx, (key, spikes) in enumerate(spike_times.items()):
-            # bin the spike times
-            binned_spike_counts = np.histogram(spikes, bins=bins)[0]
-
-            # apply a transform
-            if transform is None:
-                Y[:, idx] = binned_spike_counts
-            elif transform in ('sqrt', 'square_root'):
-                Y[:, idx] = np.sqrt(binned_spike_counts)
-            else:
-                raise ValueError(f'Transform {transform} is not valid.')
-
+        spike_times_array = [spikes for key, spikes in spike_times.items()]
+        Y = bin_spike_times(spike_times_array, bins, transform=transform)
         return Y
 
     def get_binned_times(self, bin_width=0.5):
