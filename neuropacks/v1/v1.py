@@ -54,11 +54,11 @@ class V1:
             self.angles = []
             self.responses_by_stim = []
             for dp in self.data_path:
-                results = V1._read_data_single_file(self.data_path)
+                results = V1._read_data_single_file(dp)
                 self.angles.append(results[0])
                 self.responses_by_stim.append(results[1])
             self.angles = np.concatenate(self.angles)
-            self.responses_by_stim = np.concatenate(self.respons)
+            self.responses_by_stim = np.concatenate(self.responses_by_stim, axis=1)
         else:
             self.angles, self.responses_by_stim = V1._read_data_single_file(self.data_path)
 
@@ -141,6 +141,7 @@ class V1:
 
         # calculate response per trial
         if response == 'max':
+            print(self.responses_by_stim.shape)
             X = np.max(self.responses_by_stim[cells], axis=-1).T
         else:
             raise NotImplementedError('Other response types not implemented.')
