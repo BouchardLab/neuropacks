@@ -5,6 +5,8 @@ import scipy as sp
 
 from pynwb import NWBHDF5IO
 
+from nsds_lab_to_nwb.metadata import get_stimulus_metadata
+
 from neuropacks.nsds_nwb.utils import slice_interval
 
 NEURAL_DATA_SOURCES = {'ecog': 'ECoG',
@@ -46,6 +48,13 @@ class NSDSNWBAudio:
         self._stimulus_envelope = None
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
+            self.session_description = nwb.session_description
+            try:
+                self.stim_info = get_stimulus_metadata(self.session_description)
+                self.stim_name = self.stim_info['name']
+            except KeyError:
+                self.stim_info = None
+                self.stim_name = None
             try:
                 self.intervals = nwb.intervals['trials'].to_dataframe()
             except Exception:
@@ -56,7 +65,7 @@ class NSDSNWBAudio:
                 self.electrode_df = None
 
     def get_time_array(self, num_samples, pre_stim, post_stim):
-        ''' Return time array for stimulus trial given number of samples 
+        ''' Return time array for stimulus trial given number of samples
         in a trial and pre_stim (ms) and post_stim (ms) times'''
         trials_df = self.intervals
         trials_df = trials_df[trials_df['sb'] == 's']
