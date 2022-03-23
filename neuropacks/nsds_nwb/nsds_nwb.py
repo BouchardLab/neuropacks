@@ -49,12 +49,7 @@ class NSDSNWBAudio:
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
             self.session_description = nwb.session_description
-            try:
-                self.stim_info = get_stimulus_metadata(self.session_description)
-                self.stim_name = self.stim_info['name']
-            except KeyError:
-                self.stim_info = None
-                self.stim_name = None
+            self.stim_name, self.stim_info = detect_stim_for_session(self.session_description)
             try:
                 self.intervals = nwb.intervals['trials'].to_dataframe()
             except Exception:
@@ -324,3 +319,22 @@ class NSDSNWBAudio:
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
         return self._stimulus_envelope
+
+
+def detect_stim_for_session(session_description):
+    try:
+        stim_info = get_stimulus_metadata(session_description)
+        stim_name = stim_info['name']
+        return stim_name, stim_info
+
+    except ValueError:
+        # at some point in nsds-lab-to-nwb development,
+        # session description was "Auditory experiment with <stim_name> stimulus"
+        aux_split = session_description.split(' ')
+        if aux_split[0] == "Auditory" and aux_split[-1] == 'stimulus':
+            stim_name_detected = ' '.join(aux_split[3:-1])
+            stim_info = get_stimulus_metadata(stim_name_detected)
+            stim_name = stim_info['name']
+            return stim_name, stim_info
+        else:
+            return None, None
