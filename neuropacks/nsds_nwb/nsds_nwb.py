@@ -5,6 +5,8 @@ import scipy as sp
 
 from pynwb import NWBHDF5IO
 
+from nsds_lab_to_nwb.metadata import get_stimulus_metadata
+
 from neuropacks.nsds_nwb.utils import slice_interval
 
 NEURAL_DATA_SOURCES = {'ecog': 'ECoG',
@@ -46,6 +48,8 @@ class NSDSNWBAudio:
         self._stimulus_envelope = None
         with NWBHDF5IO(self.nwb_path, 'r') as io:
             nwb = io.read()
+            self.session_description = nwb.session_description
+            self.stim_name, self.stim_info = detect_stim_for_session(self.session_description)
             try:
                 self.intervals = nwb.intervals['trials'].to_dataframe()
             except Exception:
@@ -56,7 +60,7 @@ class NSDSNWBAudio:
                 self.electrode_df = None
 
     def get_time_array(self, num_samples, pre_stim, post_stim):
-        ''' Return time array for stimulus trial given number of samples 
+        ''' Return time array for stimulus trial given number of samples
         in a trial and pre_stim (ms) and post_stim (ms) times'''
         trials_df = self.intervals
         trials_df = trials_df[trials_df['sb'] == 's']
@@ -315,3 +319,22 @@ class NSDSNWBAudio:
             fftd[freq > 0] *= 2
             self._stimulus_envelope = abs(sp.fft.ifft(fftd))
         return self._stimulus_envelope
+
+
+def detect_stim_for_session(session_description):
+    try:
+        stim_info = get_stimulus_metadata(session_description)
+        stim_name = stim_info['name']
+        return stim_name, stim_info
+
+    except ValueError:
+        # at some point in nsds-lab-to-nwb development,
+        # session description was "Auditory experiment with <stim_name> stimulus"
+        aux_split = session_description.split(' ')
+        if aux_split[0] == "Auditory" and aux_split[-1] == 'stimulus':
+            stim_name_detected = ' '.join(aux_split[3:-1])
+            stim_info = get_stimulus_metadata(stim_name_detected)
+            stim_name = stim_info['name']
+            return stim_name, stim_info
+        else:
+            return None, None
