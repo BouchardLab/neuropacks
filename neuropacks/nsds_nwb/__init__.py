@@ -6,6 +6,25 @@ from .discrete import Tone, WhiteNoise
 
 
 def get_nsds_nwb_neuropack(nwb_path, stim_name=None):
+    '''Wrapper function to select and construct the correct neuropack class
+    according to the stimulus type used in the block.
+
+    Parameters
+    ----------
+    nwb_path : str or pathlike
+        Path to the NWB file.
+    stim_name : str
+        Specifies the stimulus name, to determine which neuropack to use.
+        Standard options are ('dmr', 'timit', 'tone*', 'wn*')
+        but alternative names like 'Ripples' or 'White noise' are allowed; see
+        full list in `nsds_lab_to_nwb.metadata.resources.list_of_stimuli.yaml`.
+        If None, stimulus name is auto-detected from the NWB file.
+
+    Returns
+    -------
+    Returns a neuropack instance (of an appropriate subclass of NSDSNWBAudio),
+    depending on the stimulus type.
+    '''
     if stim_name is None:
         with NWBHDF5IO(nwb_path, 'r') as io:
             nwb = io.read()
