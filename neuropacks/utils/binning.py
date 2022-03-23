@@ -1,96 +1,156 @@
 import numpy as np
 
-from scipy.interpolate import interp1d
 from scipy.ndimage import gaussian_filter1d
 
-
-def spike_times_to_rates(unit_spiking_times, bins=None,
-                         t_start=None, t_end=None,
-                         bin_width=None, bin_type='time', bin_rep='left',
-                         boxcox=0.5, filter_fn='none', **filter_kwargs):
-    '''
-    bin_width : float
-        Bin width for binning spikes.
-        Should be in the same unit as unit_spiking_times (in most cases seconds).
-    bin_type : str
-        Whether to bin spikes along time or position. Currently only time supported
-    boxcox: float or None
-        Apply boxcox transformation
-    filter_fn: str
-        Check filter_dict
-    filter_kwargs
-        keyword arguments for filter_fn
-    '''
-    if bins is None:
-        bins = create_bins(t_start=t_start, t_end=t_end, bin_width=bin_width,
-                           bin_type='time')
-
-    if bin_rep == 'center':
-        t_binned = bins[:-1] + bin_width / 2  # midpoints
-    elif bin_rep == 'left':
-        t_binned = bins[:-1]    # left endpoints
-    elif bin_rep == 'right':
-        t_binned = bins[1:]     # right endpoints
-    else:
-        raise ValueError('bin_rep should be one of center, left or right.')
-
-    # get spike rates time series from unit spike times
-    spike_rates = get_spike_rates(unit_spiking_times, bins,
-                                  filter_fn=filter_fn,
-                                  boxcox=boxcox, **filter_kwargs)
-    return t_binned, spike_rates
+from neuropacks.utils.signal import box_cox
 
 
 def create_bins(t_start, t_end, bin_width, bin_type='time'):
+    """Create bins for the specified time interval.
+
+    Parameters
+    ----------
+    t_start : float
+        Start time, in an appropriate unit of time (for example seconds).
+        This corresponds to the first value of the output bins.
+    t_end : float
+        End time, in the same unit as the t_start unit.
+        This corresponds to the last value of the output bins.
+    bin_width : float
+        Bin width, in the same unit as the t_start unit.
+    bin_type : str
+        How to balance the bin sizes. For now the only option is 'time'.
+        If 'time', bins have uniform lengths (bin_width) in time.
+
+    Returns
+    -------
+    bins : ndarray, shape (n_bin + 1, )
+        A sequence of time values that starts with t_start and ends with t_end.
+        This gives (n_bins + 1) boundary values that define n_bin intervals.
+    """
     T = t_end - t_start
     if bin_type == 'time':
-        bins = np.linspace(t_start, t_end, int(T // bin_width))
+        # Bug: the number was off by 1 here, because the endpoint is included.
+        # More general issue with linspace: When T is not an exactly multiple
+        # of bin_width, the resulting bins may not have the requested bin_width.
+        # ---
+        # bins = np.linspace(t_start, t_end, int(T // bin_width))
+
+        # fixed to use exact bin widths
+        n_bins = int(np.ceil(T / bin_width))
+        bins = t_start + bin_width * np.arange(n_bins + 1)
     else:
         raise ValueError('unknown bin_type')
     return bins
 
 
-def get_spike_rates(unit_spiking_times, bins,
-                    boxcox=0.5, log=None,
-                    filter_fn='none', **filter_kwargs):
-    if filter_fn == 'none':
+def bin_spike_times(spike_times_by_units, bins,
+                    apply_transform={}, apply_filter={}):
+    """Bin the spike times from each single unit, and optionally apply
+    transform and filtering on the binned spike counts.
 
-        def do_nothing(x, **kwargs):
-            ''' do nothing and just return the input argument '''
-            return x
+    Parameters
+    ----------
+    spike_times_by_units : iterable (first over units, then over spikes)
+        Either a list of arrays where each array stores spike times from a unit,
+        or a 2D array with shape (n_units, spikes).
 
-        _filter = do_nothing
+    bins : ndarray
+        Timepoints at bin boundaries. This array should have shape (n_bin + 1, )
+        where n_bin is the number of timepoints in the output spike_rates.
 
-    elif filter_fn == 'gaussian':
-        _filter = gaussian_filter1d
-        bin_width = bins[1] - bins[0]
-        filter_kwargs['sigma'] /= bin_width  # convert to unit of bins
-        # filter_kwargs['sigma'] = min(1, filter_kwargs['sigma']) # -- ??
+    apply_transform: function or dictionary
+        Specifies an element-wise transformation (same operation for each time)
+        for the binned spike counts from each unit.
 
-    else:
-        raise ValueError(f'unknown filter_fn: got {filter_fn}')
+    apply_filter: function or dictionary
+        Specifies a filtering operation (across the time axis)
+        for the binned spike counts from each unit.
 
+    Returns
+    -------
+    spike_rates: ndarray, shape (n_bins, n_units)
+        Binned, transformed and filtered spike counts from each unit.
+    """
+    # if a transform function is provided, use it directly; otherwise build
+    if not callable(apply_transform):
+        if apply_transform is None:
+            apply_transform = {}
+        if not isinstance(apply_transform, dict):
+            raise TypeError('apply_transform should be either a function or a dictionary.')
+        apply_transform = build_transform(**apply_transform)
+
+    # if a filtering function is provided, use it directly; otherwise build
+    if not callable(apply_filter):
+        if apply_filter is None:
+            apply_filter = {}
+        if not isinstance(apply_filter, dict):
+            raise TypeError('apply_filter should be either a function or a dictionary.')
+        apply_filter = build_filter(**apply_filter)
+
+    # bin spike times, then apply optional transform and filter
     all_rates_list = []
-    for spike_times in unit_spiking_times:
+    for spike_times in spike_times_by_units:
         spike_counts = np.histogram(spike_times, bins=bins)[0]
-        if boxcox is not None:
-            spike_counts = np.array(
-                [box_cox(spike_count, boxcox) for spike_count in spike_counts])
-        if log is not None:
-            spike_counts = np.array(
-                [np.log(spike_count) / np.log(log) for spike_count in spike_counts])
-        rates = _filter(spike_counts.astype(np.float), **filter_kwargs)
+        # apply transform to spike counts at each timepoint
+        spike_counts = apply_transform(spike_counts)
+        # apply filter across timepoints (e.g. gaussian smoothing)
+        rates = apply_filter(spike_counts)
         all_rates_list.append(rates)
+
     spike_rates = np.stack(all_rates_list, axis=1)
     return spike_rates
 
 
-def box_cox(x, power_param):
-    ''' one-parameter Box-Cox transformation '''
-    return (np.power(x, power_param) - 1) / power_param
+def build_transform(boxcox=None, log=None, filter={}):
+    """Build and return a function that transforms spike counts.
+
+    Parameters
+    ----------
+    boxcox : float (or None)
+        If a value is given, apply a boxcox transform with this parameter value.
+    log : float (or None)
+        If a value is given, take a log with this value as the log base.
+
+    Returns
+    -------
+    _transform : function
+        Function that takes a 1D ndarray as input, and applies the same transform
+        to each element of the array.
+    """
+    def _transform(x_traj):
+        ''' x_traj is a 1D ndarray. '''
+        if boxcox is not None:
+            return np.array([box_cox(x, boxcox) for x in x_traj])
+
+        if log is not None:
+            return np.array([np.log(x) / np.log(log) for x in x_traj])
+
+        # otherwise do nothing
+        return x_traj
+
+    return _transform
 
 
-def downsample_by_interp(x, t, t_samp):
-    interpolator = interp1d(t, x)
-    x_samp = interpolator(t_samp)
-    return x_samp
+def build_filter(gaussian=None):
+    """Build and return a function that applies filtering to a 1D timeseries.
+
+    Parameters
+    ----------
+    gaussian : float (or None)
+        If a value is given, apply gaussian filtering with this value as sigma.
+
+    Returns
+    -------
+    _filter : function
+        Function that takes a 1D ndarray as input, applies specified filtering,
+        and returns the filtered array with the same shape.
+    """
+    def _filter(x_traj):
+        ''' x_traj is a 1D ndarray. '''
+        if gaussian is not None:
+            return gaussian_filter1d(x_traj, sigma=gaussian)
+        # otherwise do nothing
+        return x_traj
+
+    return _filter
