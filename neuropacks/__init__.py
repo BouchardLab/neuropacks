@@ -9,6 +9,7 @@ from .ret2.ret2 import RET2
 from .nhp.nhp import NHP
 from .bg.bg import BG
 from .hc6.hc6 import HC6
+from .v1.v1 import V1
 
 
 __all__ = ["AC1",
@@ -21,4 +22,5 @@ __all__ = ["AC1",
            "RET2",
            "NHP",
            "BG",
-           "HC6"]
+           "HC6",
+           "V1"]
