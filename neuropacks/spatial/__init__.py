@@ -1,1 +1,1 @@
-from .hc6.hc6 import HC6
+from .hc6 import HC6, HC6Epoch
