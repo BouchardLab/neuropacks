@@ -61,7 +61,8 @@ class NSDSNWBAudio:
         trials_df = self.intervals
         trials_df = trials_df[trials_df['sb'] == 's']
         start_time = pre_stim
-        stim_duration = trials_df.iloc[0]['stop_time'] - trials_df.iloc[0]['start_time']
+        stim_duration = trials_df.iloc[0]['stop_time'] - \
+            trials_df.iloc[0]['start_time']
         stop_time = stim_duration + post_stim
         time = np.linspace(start_time,
                            stop_time,
@@ -107,10 +108,16 @@ class NSDSNWBAudio:
     def get_trialized_responses(self, neural_data, in_memory=True, pre_stim=0, post_stim=0, good_electrodes_flag=True):
         data_ns = self._get_processed_neural_data(
             neural_data, load_data=in_memory)
+        # get number of channels by extracting a small slice of data
+        num_channels = self._get_processed_neural_data(
+            neural_data,
+            start_time=0,
+            stop_time=1).data.shape[1]
+        
         if good_electrodes_flag:
             good_electrodes = data_ns.good_electrodes
         else:
-            good_electrodes = [True]*len(data_ns.good_electrodes)
+            good_electrodes = [True]*num_channels
 
         responses_list = []
         baselines_list = []
