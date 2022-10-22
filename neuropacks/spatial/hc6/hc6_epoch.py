@@ -134,10 +134,15 @@ class HC6Epoch:
 
     def parse_and_bin_traj_region(self, target_region,
                                   spike_threshold=0, **binning_kwargs):
+        if target_region is None:
+            # allow unspecified target region (all regions)
+            units_table_filtered = self.units_table[
+                self.units_table['num_spikes'] >= spike_threshold]
+        else:
+            units_table_filtered = self.units_table[
+                (self.units_table['region'] == target_region) &
+                (self.units_table['num_spikes'] >= spike_threshold)]
 
-        units_table_filtered = self.units_table[
-            (self.units_table['region'] == target_region) &
-            (self.units_table['num_spikes'] >= spike_threshold)]
         unit_spiking_times = units_table_filtered['spike_times'].copy().to_numpy()
 
         # binning_kwargs = dict(
@@ -171,7 +176,7 @@ class HC6Epoch:
                          'times_rel': t_binned_rel,
                          'pos_corr': pos_binned,  # duplicate
                          'traj': {'index': i_trial, **traj_info},
-                         'binning_kwargs': {spike_threshold: spike_threshold,
+                         'binning_kwargs': {'spike_threshold': spike_threshold,
                                             **binning_kwargs}}
             parsed_binned.append(binned_tr)
         return parsed_binned
@@ -205,6 +210,9 @@ class HC6Epoch:
     # --- for analysis pipeline ---
 
     def get_linpos_nodes(self, traj_type):
+        if self.bad_epoch:
+            return None, None
+
         boundaries, idx_choice_point = get_linpos_nodes(self.well_xys_dict, traj_type)
         return boundaries, idx_choice_point
 
