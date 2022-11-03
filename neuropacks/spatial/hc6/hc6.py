@@ -5,7 +5,7 @@ from scipy.io import loadmat
 
 
 class HC6():
-    def __init__(self, directory):
+    def __init__(self, directory, base=None):
         """Processes and provides response matrices for the hc6 hippocampus
         dataset obtained from the Frank lab.
 
@@ -35,7 +35,11 @@ class HC6():
         spike_times : nested dict
         """
         self.directory = directory
-        self.base = os.path.basename(os.path.normpath(self.directory)).lower()
+
+        if base is None:
+            base = os.path.basename(os.path.normpath(self.directory)).lower()
+        self.base = base
+
         self.__initialize_class()
 
     def __initialize_class(self):
@@ -131,7 +135,7 @@ class HC6():
                         unit_idx += 1
 
     def get_positions(self, day, epoch, return_time=False):
-        """Obtain the mouse position by time for a given experiment.
+        """Obtain the animal's position by time for a given experiment.
 
         Parameters
         ----------
@@ -169,7 +173,7 @@ class HC6():
             return xs, ys
 
     def get_spike_times(self, day, epoch, unit):
-        """Obtain the mouse position by time for a given experiment.
+        """Obtain spike times by day, epoch and unit.
 
         Parameters
         ----------
@@ -199,7 +203,7 @@ class HC6():
         return spike_times
 
     def get_binned_positions(self, day, epoch, bin_width=0.5):
-        """Bin the mouse positions according to a bin width.
+        """Bin the animal's positions according to a bin width.
 
         Parameters
         ----------

@@ -8,7 +8,7 @@ from .ret1.ret1 import RET1
 from .ret2.ret2 import RET2
 from .nhp.nhp import NHP
 from .bg.bg import BG
-from .hc6.hc6 import HC6
+from .spatial import HC6
 from .v1.v1 import V1
 
 
